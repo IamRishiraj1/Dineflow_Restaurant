@@ -1,0 +1,227 @@
+// DineFlow — Prisma schema
+// Provider: PostgreSQL, hosted on Supabase.
+//
+// Two connection strings are used on purpose:
+// - `url` (DATABASE_URL) is Supabase's *pooled* connection (port 6543). The
+//   running app uses this — pooling matters in serverless environments like
+//   Vercel, where many short-lived function instances would otherwise each
+//   open their own DB connection and exhaust Postgres's connection limit.
+// - `directUrl` (DIRECT_URL) is Supabase's *direct* connection (port 5432).
+//   Only Prisma CLI commands (migrate, db push, studio) use this — pooled
+//   connections don't support the prepared statements migrations need.
+// Both values come from Supabase → Project Settings → Database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Auth — shape required by the NextAuth.js / Auth.js Prisma adapter.
+// Do not rename these fields; the adapter reads/writes them by exact name.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String? // bcrypt hash, only set for email/password accounts
+  phone         String?
+  role          Role      @default(CUSTOMER)
+
+  accounts Account[]
+  sessions Session[]
+  orders   Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Catalog
+// ─────────────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  image       String?
+  isActive    Boolean @default(true)
+
+  foods Food[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Food {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  price           Int // whole BDT (Taka) — no decimals, matches how the UI formats currency
+  image           String?
+  rating          Float    @default(4.5)
+  reviewCount     Int      @default(0)
+  prepTimeMinutes Int
+  ingredients     String[]
+  isAvailable     Boolean  @default(true)
+  isPopular       Boolean  @default(false)
+  isFeatured      Boolean  @default(false)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Orders
+// ─────────────────────────────────────────────────────────────────────────
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  CARD
+  CASH
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  FAILED
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id          String @id @default(cuid())
+  orderNumber String @unique
+
+  // Nullable so guest checkout stays possible even after real auth ships.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  fullName String
+  email    String
+  phone    String
+
+  orderType  OrderType
+  address    String?
+  city       String?
+  postalCode String?
+
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PENDING)
+  status        OrderStatus   @default(PLACED)
+
+  subtotal              Int
+  deliveryFee           Int
+  total                 Int
+  estimatedReadyMinutes Int
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id       String  @id @default(cuid())
+  name     String // snapshot of the food name at order time
+  price    Int // snapshot of the price at order time — never re-read from Food
+  quantity Int
+  image    String?
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Kept even if the food is later deleted from the menu, so historical
+  // orders never lose their line items.
+  foodId String?
+  food   Food?   @relation(fields: [foodId], references: [id], onDelete: SetNull)
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Restaurant settings — a single editable row for the admin Settings page.
+// ─────────────────────────────────────────────────────────────────────────
+
+model RestaurantSettings {
+  id           String @id @default("singleton")
+  name         String
+  phone        String
+  email        String
+  address      String
+  currency     String @default("BDT")
+  deliveryFee  Int    @default(60)
+  minimumOrder Int    @default(200)
+  openingHours Json // array of { day, isOpen, open, close }
+
+  updatedAt DateTime @updatedAt
+}
