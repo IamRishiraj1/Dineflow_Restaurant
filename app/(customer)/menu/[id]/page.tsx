@@ -32,7 +32,7 @@ export default function FoodDetailsPage({ params }: { params: { id: string } }) 
   const related = foods.filter((f) => f.categoryId === food.categoryId && f.id !== food.id).slice(0, 4);
 
   function handleAddToCart() {
-    if (!food.isAvailable) return;
+    if (!food?.isAvailable) return;
     addToCart(food.id, quantity);
     showToast(`${quantity} × ${food.name} added to cart`, "success");
   }
