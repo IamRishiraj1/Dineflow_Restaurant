@@ -51,8 +51,8 @@ export const mockOrders: Order[] = [
     paymentMethod: "card",
     paymentStatus: "paid",
     items: [
-      { foodId: "food-018", name: "Crispy Fried Chicken Bucket", price: 690, quantity: 1, image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=200&q=80&auto=format&fit=crop" },
-      { foodId: "food-013", name: "Fresh Lime Soda", price: 110, quantity: 2, image: "https://images.unsplash.com/photo-1621263764928-df1444c5e859?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-018", name: "Crispy Fried Chicken Bucket", price: 690, quantity: 1, image: "https://images.unsplash.com/photo-1624153064067-566cae78993d?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-013", name: "Fresh Lime Soda", price: 110, quantity: 2, image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=200&q=80&auto=format&fit=crop" },
     ],
     subtotal: 910,
     deliveryFee: 60,
@@ -70,8 +70,8 @@ export const mockOrders: Order[] = [
     paymentMethod: "cash",
     paymentStatus: "pending",
     items: [
-      { foodId: "food-005", name: "Alfredo Pasta", price: 420, quantity: 1, image: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=200&q=80&auto=format&fit=crop" },
-      { foodId: "food-010", name: "Chocolate Fudge Brownie", price: 220, quantity: 1, image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-005", name: "Alfredo Pasta", price: 420, quantity: 1, image: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-010", name: "Chocolate Fudge Brownie", price: 220, quantity: 1, image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?w=200&q=80&auto=format&fit=crop" },
     ],
     subtotal: 640,
     deliveryFee: 60,
@@ -125,8 +125,8 @@ export const mockOrders: Order[] = [
     paymentMethod: "cash",
     paymentStatus: "paid",
     items: [
-      { foodId: "food-016", name: "Double Cheese Beef Burger", price: 460, quantity: 1, image: "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=200&q=80&auto=format&fit=crop" },
-      { foodId: "food-012", name: "Mango Lassi", price: 140, quantity: 2, image: "https://images.unsplash.com/photo-1626200926749-267a1c6e0e17?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-016", name: "Double Cheese Beef Burger", price: 460, quantity: 1, image: "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-012", name: "Mango Lassi", price: 140, quantity: 2, image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=200&q=80&auto=format&fit=crop" },
     ],
     subtotal: 740,
     deliveryFee: 60,
@@ -162,8 +162,8 @@ export const mockOrders: Order[] = [
     paymentMethod: "card",
     paymentStatus: "paid",
     items: [
-      { foodId: "food-008", name: "Honey Glazed Chicken", price: 390, quantity: 1, image: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=200&q=80&auto=format&fit=crop" },
-      { foodId: "food-011", name: "New York Cheesecake", price: 260, quantity: 1, image: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-008", name: "Honey Glazed Chicken", price: 390, quantity: 1, image: "https://images.unsplash.com/photo-1600555379765-f82335a7b1b0?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-011", name: "New York Cheesecake", price: 260, quantity: 1, image: "https://images.unsplash.com/photo-1547414368-ac947d00b91d?w=200&q=80&auto=format&fit=crop" },
     ],
     subtotal: 650,
     deliveryFee: 60,
@@ -182,7 +182,7 @@ export const mockOrders: Order[] = [
     paymentStatus: "pending",
     items: [
       { foodId: "food-006", name: "Spicy Arrabbiata Pasta", price: 400, quantity: 1, image: "https://images.unsplash.com/photo-1608219992759-8d74ed8d76eb?w=200&q=80&auto=format&fit=crop" },
-      { foodId: "food-014", name: "Soft Drinks (Can)", price: 60, quantity: 2, image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-014", name: "Soft Drinks (Can)", price: 60, quantity: 2, image: "https://images.unsplash.com/photo-1609951651467-713256d1a3be?w=200&q=80&auto=format&fit=crop" },
     ],
     subtotal: 520,
     deliveryFee: 60,
@@ -200,7 +200,7 @@ export const mockOrders: Order[] = [
     paymentMethod: "card",
     paymentStatus: "paid",
     items: [
-      { foodId: "food-001", name: "Classic Chicken Burger", price: 320, quantity: 3, image: "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-001", name: "Classic Chicken Burger", price: 320, quantity: 3, image: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=200&q=80&auto=format&fit=crop" },
     ],
     subtotal: 960,
     deliveryFee: 0,
@@ -218,7 +218,7 @@ export const mockOrders: Order[] = [
     paymentMethod: "card",
     paymentStatus: "paid",
     items: [
-      { foodId: "food-018", name: "Crispy Fried Chicken Bucket", price: 690, quantity: 1, image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=200&q=80&auto=format&fit=crop" },
+      { foodId: "food-018", name: "Crispy Fried Chicken Bucket", price: 690, quantity: 1, image: "https://images.unsplash.com/photo-1624153064067-566cae78993d?w=200&q=80&auto=format&fit=crop" },
     ],
     subtotal: 690,
     deliveryFee: 60,

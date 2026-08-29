@@ -1,8 +1,17 @@
 import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-/** Merge conditional class names together. */
+/**
+ * Merge conditional class names together, resolving conflicting Tailwind
+ * utilities so the later class wins (e.g. a caller's `text-cream-50`
+ * correctly overrides a variant's `text-ink-900`). Plain clsx() only
+ * concatenates strings — it does NOT do this, and which class wins ends up
+ * depending on Tailwind's generated stylesheet order instead of the order
+ * they were passed in, which is what caused the invisible "Explore Menu"
+ * button (its override className lost to the outline variant's text color).
+ */
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs);
+  return twMerge(clsx(inputs));
 }
 
 /** Format a number as Bangladeshi Taka, e.g. 42500 -> "৳42,500". */

@@ -26,19 +26,19 @@ export default function AboutPage() {
         {[
           {
             image:
-              "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1760169799369-2b8574466735?w=800&q=80&auto=format&fit=crop",
             title: "Our kitchen",
             copy: "Every dish is prepared fresh to order by a team that treats consistency as seriously as flavor.",
           },
           {
             image:
-              "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80&auto=format&fit=crop",
             title: "Our sourcing",
             copy: "Produce and proteins are sourced daily from trusted local suppliers across Dhaka.",
           },
           {
             image:
-              "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=800&q=80&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80&auto=format&fit=crop",
             title: "Our platform",
             copy: "DineFlow's ordering and tracking experience is built to feel as good as the food tastes.",
           },

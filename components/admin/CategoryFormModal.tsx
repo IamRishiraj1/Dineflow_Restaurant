@@ -49,7 +49,7 @@ export function CategoryFormModal({ isOpen, onClose, onSubmit, initialCategory }
       description: form.description.trim(),
       image:
         form.image.trim() ||
-        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80&auto=format&fit=crop",
       isActive: form.isActive,
     });
     onClose();

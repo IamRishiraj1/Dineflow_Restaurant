@@ -38,7 +38,7 @@ export function Hero() {
           <div className="relative h-full w-full overflow-hidden rounded-[1.75rem] shadow-lift">
             <Image
               src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&q=80&auto=format&fit=crop"
-              alt="Chef plating a freshly prepared gourmet burger with fries"
+              alt="Fresh grain bowl with tofu, corn, tomatoes, and vegetables"
               fill
               priority
               sizes="(max-width: 1024px) 90vw, 45vw"

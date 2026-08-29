@@ -28,7 +28,7 @@ export const categories: Category[] = [
     slug: "chicken",
     description: "Crispy, grilled, and glazed",
     image:
-      "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1585703900468-13c7a978ad86?w=600&q=80&auto=format&fit=crop",
     isActive: true,
   },
   {
@@ -46,7 +46,7 @@ export const categories: Category[] = [
     slug: "desserts",
     description: "Something sweet to finish",
     image:
-      "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?w=600&q=80&auto=format&fit=crop",
     isActive: true,
   },
   {
@@ -55,7 +55,7 @@ export const categories: Category[] = [
     slug: "drinks",
     description: "Refreshing sips, hot or cold",
     image:
-      "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=600&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&q=80&auto=format&fit=crop",
     isActive: true,
   },
 ];

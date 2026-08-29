@@ -11,7 +11,7 @@ export const foods: Food[] = [
       "Grilled chicken breast, lettuce, tomato, and house mayo in a toasted brioche bun.",
     price: 320,
     image:
-      "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-burgers",
     rating: 4.6,
     reviewCount: 214,
@@ -82,7 +82,7 @@ export const foods: Food[] = [
       "Fettuccine tossed in a silky parmesan cream sauce with cracked black pepper.",
     price: 420,
     image:
-      "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-pasta",
     rating: 4.4,
     reviewCount: 132,
@@ -128,7 +128,7 @@ export const foods: Food[] = [
     description: "Pan-seared chicken thighs in a sticky honey-soy glaze with sesame.",
     price: 390,
     image:
-      "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1600555379765-f82335a7b1b0?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-chicken",
     rating: 4.6,
     reviewCount: 154,
@@ -159,7 +159,7 @@ export const foods: Food[] = [
     description: "Rich, fudgy brownie served warm with a dusting of cocoa.",
     price: 220,
     image:
-      "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-desserts",
     rating: 4.8,
     reviewCount: 187,
@@ -175,7 +175,7 @@ export const foods: Food[] = [
     description: "Creamy baked cheesecake on a buttery biscuit base with berry compote.",
     price: 260,
     image:
-      "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1547414368-ac947d00b91d?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-desserts",
     rating: 4.7,
     reviewCount: 143,
@@ -190,7 +190,7 @@ export const foods: Food[] = [
     description: "Chilled yogurt drink blended with ripe mango and a hint of cardamom.",
     price: 140,
     image:
-      "https://images.unsplash.com/photo-1626200926749-267a1c6e0e17?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-drinks",
     rating: 4.6,
     reviewCount: 121,
@@ -206,7 +206,7 @@ export const foods: Food[] = [
     description: "Sparkling soda water with fresh lime juice, mint, and a touch of salt.",
     price: 110,
     image:
-      "https://images.unsplash.com/photo-1621263764928-df1444c5e859?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-drinks",
     rating: 4.3,
     reviewCount: 88,
@@ -221,7 +221,7 @@ export const foods: Food[] = [
     description: "Choice of Coke, Sprite, or Fanta — served ice cold.",
     price: 60,
     image:
-      "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1609951651467-713256d1a3be?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-drinks",
     rating: 4.2,
     reviewCount: 67,
@@ -251,7 +251,7 @@ export const foods: Food[] = [
     description: "Two beef patties, double cheddar, pickles, and secret sauce.",
     price: 460,
     image:
-      "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-burgers",
     rating: 4.9,
     reviewCount: 198,
@@ -266,7 +266,7 @@ export const foods: Food[] = [
     description: "Alfredo pasta topped with sliced grilled chicken breast and parsley.",
     price: 480,
     image:
-      "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1600803907087-f56d462fd26b?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-pasta",
     rating: 4.6,
     reviewCount: 109,
@@ -281,7 +281,7 @@ export const foods: Food[] = [
     description: "6 pieces of our signature crispy fried chicken, spice-marinated overnight.",
     price: 690,
     image:
-      "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1624153064067-566cae78993d?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-chicken",
     rating: 4.8,
     reviewCount: 276,
@@ -297,7 +297,7 @@ export const foods: Food[] = [
     description: "Two scoops of Madagascar vanilla bean ice cream with a wafer.",
     price: 180,
     image:
-      "https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-desserts",
     rating: 4.5,
     reviewCount: 92,
@@ -312,7 +312,7 @@ export const foods: Food[] = [
     description: "Slow-steeped cold brew over ice with a splash of milk.",
     price: 190,
     image:
-      "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=800&q=80&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1586734565008-fbdbc166fd6c?w=800&q=80&auto=format&fit=crop",
     categoryId: "cat-drinks",
     rating: 4.6,
     reviewCount: 74,
