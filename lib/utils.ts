@@ -55,3 +55,17 @@ export function generateId(prefix = "id"): string {
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
+
+/**
+ * Turn a name into a URL-safe slug, e.g. "Spicy Chicken!" -> "spicy-chicken".
+ * Mirrors the logic already used client-side in CategoryFormModal, so a
+ * category created via the API gets the same slug it would have gotten from
+ * the admin form.
+ */
+export function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+}
