@@ -13,7 +13,8 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CategoryFormModal } from "@/components/admin/CategoryFormModal";
 
 export default function AdminCategoriesPage() {
-  const { categories, foods, addCategory, updateCategory, deleteCategory, toggleCategoryActive } = useCatalog();
+  const { categories, foods, isLoading, error, addCategory, updateCategory, deleteCategory, toggleCategoryActive } =
+    useCatalog();
   const { showToast } = useToast();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -24,20 +25,47 @@ export default function AdminCategoriesPage() {
     return foods.filter((f) => f.categoryId === categoryId).length;
   }
 
-  function handleSubmit(data: Omit<Category, "id">) {
-    if (editingCategory) {
-      updateCategory(editingCategory.id, data);
-      showToast(`${data.name} updated`, "success");
-    } else {
-      addCategory(data);
-      showToast(`${data.name} added`, "success");
+  async function handleSubmit(data: Omit<Category, "id">) {
+    try {
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, data);
+        showToast(`${data.name} updated`, "success");
+      } else {
+        await addCategory(data);
+        showToast(`${data.name} added`, "success");
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Something went wrong. Please try again.", "error");
+    }
+  }
+
+  async function handleToggleActive(category: Category) {
+    try {
+      await toggleCategoryActive(category.id);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to update category.", "error");
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deletingCategory) return;
+    try {
+      await deleteCategory(deletingCategory.id);
+      showToast(`${deletingCategory.name} deleted`, "info");
+    } catch (err) {
+      // The API blocks deleting a category that still has foods in it
+      // (see app/api/categories/[id]/route.ts) and returns a clear message —
+      // surface that instead of a generic failure.
+      showToast(err instanceof Error ? err.message : "Failed to delete category.", "error");
     }
   }
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-500">{categories.length} categories</p>
+        <p className="text-sm text-ink-500">
+          {isLoading ? "Loading categories…" : `${categories.length} categories`}
+        </p>
         <Button
           onClick={() => {
             setEditingCategory(null);
@@ -48,7 +76,17 @@ export default function AdminCategoriesPage() {
         </Button>
       </div>
 
-      {categories.length === 0 ? (
+      {error && (
+        <div className="mt-4 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600">
+          Couldn&apos;t load categories: {error}
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="mt-5 rounded-2xl border border-ink-100 bg-white p-6 text-center text-sm text-ink-500 shadow-card">
+          Loading categories…
+        </div>
+      ) : categories.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-ink-100 bg-white p-6 shadow-card">
           <EmptyState icon={Tag} title="No categories yet" description="Add a category to start organizing your menu." />
         </div>
@@ -71,7 +109,7 @@ export default function AdminCategoriesPage() {
 
                 <div className="mt-4 flex items-center justify-between">
                   <button
-                    onClick={() => toggleCategoryActive(category.id)}
+                    onClick={() => handleToggleActive(category)}
                     role="switch"
                     aria-checked={category.isActive}
                     aria-label={`Toggle visibility for ${category.name}`}
@@ -121,12 +159,7 @@ export default function AdminCategoriesPage() {
       <ConfirmDialog
         isOpen={!!deletingCategory}
         onClose={() => setDeletingCategory(null)}
-        onConfirm={() => {
-          if (deletingCategory) {
-            deleteCategory(deletingCategory.id);
-            showToast(`${deletingCategory.name} deleted`, "info");
-          }
-        }}
+        onConfirm={handleDeleteConfirm}
         title="Delete category"
         description={`Are you sure you want to delete "${deletingCategory?.name}"? Foods in this category will remain but lose their category label.`}
       />

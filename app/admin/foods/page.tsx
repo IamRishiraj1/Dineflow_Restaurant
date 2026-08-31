@@ -14,7 +14,8 @@ import { FoodFormModal } from "@/components/admin/FoodFormModal";
 import { formatCurrency } from "@/lib/utils";
 
 export default function AdminFoodsPage() {
-  const { foods, categories, addFood, updateFood, deleteFood, toggleFoodAvailability } = useCatalog();
+  const { foods, categories, isLoading, error, addFood, updateFood, deleteFood, toggleFoodAvailability } =
+    useCatalog();
   const { showToast } = useToast();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -31,13 +32,40 @@ export default function AdminFoodsPage() {
     setIsFormOpen(true);
   }
 
-  function handleSubmit(data: Omit<Food, "id" | "rating" | "reviewCount">) {
-    if (editingFood) {
-      updateFood(editingFood.id, data);
-      showToast(`${data.name} updated`, "success");
-    } else {
-      addFood(data);
-      showToast(`${data.name} added to the menu`, "success");
+  // Now async: waits for the API call to actually succeed before showing a
+  // success toast, and shows an error toast (instead of a false "success")
+  // if the request fails. The form modal isn't awaiting this, so it still
+  // closes immediately the way it always did — only the toast timing changed.
+  async function handleSubmit(data: Omit<Food, "id" | "rating" | "reviewCount">) {
+    try {
+      if (editingFood) {
+        await updateFood(editingFood.id, data);
+        showToast(`${data.name} updated`, "success");
+      } else {
+        await addFood(data);
+        showToast(`${data.name} added to the menu`, "success");
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Something went wrong. Please try again.", "error");
+    }
+  }
+
+  async function handleToggleAvailability(food: Food) {
+    try {
+      await toggleFoodAvailability(food.id);
+      showToast(`${food.name} marked as ${food.isAvailable ? "unavailable" : "available"}`, "info");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to update availability.", "error");
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deletingFood) return;
+    try {
+      await deleteFood(deletingFood.id);
+      showToast(`${deletingFood.name} removed from the menu`, "info");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to delete food.", "error");
     }
   }
 
@@ -48,14 +76,24 @@ export default function AdminFoodsPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-500">{foods.length} items on the menu</p>
+        <p className="text-sm text-ink-500">
+          {isLoading ? "Loading menu…" : `${foods.length} items on the menu`}
+        </p>
         <Button onClick={openAddForm}>
           <Plus className="h-4 w-4" /> Add New Food
         </Button>
       </div>
 
+      {error && (
+        <div className="mt-4 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600">
+          Couldn&apos;t load the menu: {error}
+        </div>
+      )}
+
       <div className="mt-5 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-card">
-        {foods.length === 0 ? (
+        {isLoading ? (
+          <div className="p-6 text-center text-sm text-ink-500">Loading foods…</div>
+        ) : foods.length === 0 ? (
           <div className="p-6">
             <EmptyState
               icon={UtensilsCrossed}
@@ -92,13 +130,7 @@ export default function AdminFoodsPage() {
                     <td className="py-3 pr-4 font-medium text-ink-900">{formatCurrency(food.price)}</td>
                     <td className="py-3 pr-4">
                       <button
-                        onClick={() => {
-                          toggleFoodAvailability(food.id);
-                          showToast(
-                            `${food.name} marked as ${food.isAvailable ? "unavailable" : "available"}`,
-                            "info"
-                          );
-                        }}
+                        onClick={() => handleToggleAvailability(food)}
                         role="switch"
                         aria-checked={food.isAvailable}
                         aria-label={`Toggle availability for ${food.name}`}
@@ -155,12 +187,7 @@ export default function AdminFoodsPage() {
       <ConfirmDialog
         isOpen={!!deletingFood}
         onClose={() => setDeletingFood(null)}
-        onConfirm={() => {
-          if (deletingFood) {
-            deleteFood(deletingFood.id);
-            showToast(`${deletingFood.name} removed from the menu`, "info");
-          }
-        }}
+        onConfirm={handleDeleteConfirm}
         title="Delete food item"
         description={`Are you sure you want to delete "${deletingFood?.name}"? This can't be undone.`}
       />

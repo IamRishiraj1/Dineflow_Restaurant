@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
 import { CatalogProvider } from "@/context/CatalogContext";
 import { CartProvider } from "@/context/CartContext";
 import { OrderProvider } from "@/context/OrderContext";
@@ -36,13 +37,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${fraunces.variable} ${inter.variable} ${plexMono.variable}`}>
       <body className="font-sans">
-        <CatalogProvider>
-          <CartProvider>
-            <OrderProvider>
-              <ToastProvider>{children}</ToastProvider>
-            </OrderProvider>
-          </CartProvider>
-        </CatalogProvider>
+        <AuthSessionProvider>
+          <CatalogProvider>
+            <CartProvider>
+              <OrderProvider>
+                <ToastProvider>{children}</ToastProvider>
+              </OrderProvider>
+            </CartProvider>
+          </CatalogProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

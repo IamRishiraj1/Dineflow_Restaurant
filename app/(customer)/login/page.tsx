@@ -3,15 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { ChefHat, Info } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/ToastContext";
 
-// UI-only authentication. See README → "Future Architecture" for the plan
-// to replace this with a real auth provider. Handlers below simulate a
-// short network delay and then redirect, without validating credentials
-// against any backend.
 export default function LoginPage() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -20,13 +17,29 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
-    window.setTimeout(() => {
-      showToast("Logged in successfully (mock)", "success");
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        showToast("Incorrect email or password.", "error");
+        return;
+      }
+
+      showToast("Logged in successfully", "success");
       router.push("/");
-    }, 600);
+      router.refresh();
+    } catch {
+      showToast("Something went wrong. Please try again.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -75,11 +88,6 @@ export default function LoginPage() {
         <Button type="submit" fullWidth disabled={isSubmitting}>
           {isSubmitting ? "Logging in…" : "Login"}
         </Button>
-
-        <div className="flex items-start gap-2 rounded-xl bg-ink-50 p-3 text-xs text-ink-500">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" />
-          This is a prototype. Any email and password will work — no real account is created.
-        </div>
       </form>
 
       <p className="mt-6 text-center text-sm text-ink-500">
