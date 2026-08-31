@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DineFlow — Case Study | Restaurant SaaS Platform</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --ink-950: #0F0C09;
+    --ink-900: #17130F;
+    --ink-700: #2B261F;
+    --ink-500: #4C453B;
+    --ink-400: #6E6558;
+    --ink-300: #9C9284;
+    --ink-100: #E6E3DE;
+    --ink-50: #F5F4F2;
+    --cream-50: #FFFDF9;
+    --cream-100: #FBF7EC;
+    --cream-200: #F4ECD8;
+    --ember-500: #C2700E;
+    --ember-600: #A25B0A;
+    --ember-100: #FBE3C8;
+    --success: #2E7D53;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--ink-900);
+    background: var(--cream-50);
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, .display {
+    font-family: 'Fraunces', serif;
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* Hero */
+  .hero {
+    background: var(--ink-950);
+    color: var(--cream-50);
+    padding: 72px 0 56px;
+  }
+  .eyebrow {
+    display: inline-block;
+    color: #E8A455;
+    background: rgba(194,112,14,0.15);
+    border: 1px solid rgba(194,112,14,0.4);
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 0 0 14px;
+  }
+  .hero .subtitle {
+    font-size: 18px;
+    color: #C7C1B6;
+    max-width: 620px;
+    margin: 0 0 28px;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-top: 32px;
+    padding-top: 28px;
+    border-top: 1px solid var(--ink-700);
+  }
+  .meta-item .label {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9C9284;
+    margin-bottom: 4px;
+  }
+  .meta-item .value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cream-50);
+  }
+  .cta-links {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--ember-500);
+    color: var(--cream-50);
+  }
+  .btn-outline {
+    border: 1px solid var(--ink-700);
+    color: var(--cream-50);
+  }
+
+  /* Sections */
+  section { padding: 48px 0; }
+  section.alt { background: var(--cream-100); }
+  .section-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ember-600);
+    margin-bottom: 10px;
+  }
+  h2.section-title {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0 0 20px;
+  }
+  p { color: var(--ink-500); font-size: 16px; }
+
+  /* Grid cards */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .card {
+    background: var(--cream-50);
+    border: 1px solid var(--ink-100);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  section.alt .card { background: #fff; }
+  .card h3 {
+    font-size: 16px;
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  .card p { font-size: 14px; margin: 0; }
+
+  /* Tech stack pills */
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .pill {
+    background: var(--ink-50);
+    border: 1px solid var(--ink-100);
+    color: var(--ink-700);
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 999px;
+  }
+
+  /* Feature list */
+  .feature-list { list-style: none; padding: 0; margin: 20px 0 0; }
+  .feature-list li {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--ink-100);
+    font-size: 15px;
+    color: var(--ink-700);
+  }
+  .feature-list li:last-child { border-bottom: none; }
+  .check {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(46,125,83,0.12);
+    color: var(--success);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    margin-top: 1px;
+  }
+
+  /* Screenshot placeholder */
+  .shot {
+    border: 1.5px dashed var(--ink-300);
+    border-radius: 14px;
+    background: var(--ink-50);
+    aspect-ratio: 16/10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-400);
+    font-size: 13.5px;
+    text-align: center;
+    padding: 20px;
+    margin-top: 16px;
+  }
+  .shot strong { color: var(--ink-500); font-size: 14px; margin-bottom: 4px; }
+
+  /* Timeline / challenges */
+  .challenge {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--ink-100);
+  }
+  .challenge:last-child { border-bottom: none; }
+  .challenge h3 { font-size: 16.5px; margin: 0 0 6px; }
+  .challenge .tag {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ember-600);
+    background: var(--ember-100);
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  /* Status table */
+  .status-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14.5px; }
+  .status-table th {
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-400);
+    padding: 8px 12px;
+    border-bottom: 1.5px solid var(--ink-100);
+  }
+  .status-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ink-100);
+    color: var(--ink-700);
+  }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .badge-done { background: rgba(46,125,83,0.12); color: var(--success); }
+  .badge-progress { background: var(--ember-100); color: var(--ember-600); }
+  .badge-planned { background: var(--ink-100); color: var(--ink-500); }
+
+  footer {
+    background: var(--ink-950);
+    color: var(--ink-300);
+    padding: 40px 0;
+    text-align: center;
+    font-size: 14px;
+  }
+  footer a { color: #E8A455; text-decoration: none; }
+
+  @media print {
+    section { padding: 28px 0; break-inside: avoid; }
+    .hero { padding: 40px 0 32px; }
+  }
+
+  @media (max-width: 640px) {
+    .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 32px; }
+    .meta-row { gap: 20px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="wrap">
+      <span class="eyebrow">Case Study · Full-Stack SaaS Platform</span>
+      <h1>DineFlow — Restaurant Ordering &amp; Management Platform</h1>
+      <p class="subtitle">
+        A complete restaurant SaaS built from scratch: a customer ordering storefront and an
+        admin management dashboard, architected to grow from a mock-data prototype into a
+        live, database-backed product.
+      </p>
+
+      <div class="cta-links">
+        <a href="https://dineflow-restaurant-two.vercel.app" class="btn btn-primary">View Live Site →</a>
+        <a href="#" class="btn btn-outline">View Source (GitHub)</a>
+      </div>
+
+      <div class="meta-row">
+        <div class="meta-item">
+          <div class="label">Role</div>
+          <div class="value">Full-Stack Developer</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Timeline</div>
+          <div class="value">Solo project</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Stack</div>
+          <div class="value">Next.js · TypeScript · Supabase</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Status</div>
+          <div class="value">Live — in active development</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <div class="section-label">Overview</div>
+      <h2 class="section-title">What DineFlow is</h2>
+      <p>
+        DineFlow is a two-sided restaurant platform: a polished customer storefront for
+        browsing a menu, ordering food, and tracking delivery status, paired with a full
+        admin dashboard for managing the menu, orders, payments, and sales analytics —
+        the kind of internal tooling a real restaurant business runs on day to day.
+      </p>
+      <p>
+        The project was built in two deliberate stages: first a complete, realistic
+        frontend using mock data to validate every user flow and get the design right,
+        then a systematic migration to a real PostgreSQL database, authentication, and
+        cloud deployment — mirroring how a lot of real product work actually happens.
+      </p>
+
+      <div class="grid-3">
+        <div class="card">
+          <h3>Customer Experience</h3>
+          <p>Menu browsing with search &amp; filters, cart, checkout, live order tracking, and order history.</p>
+        </div>
+        <div class="card">
+          <h3>Admin Dashboard</h3>
+          <p>Food &amp; category management, order pipeline control, payment overview, and sales analytics.</p>
+        </div>
+        <div class="card">
+          <h3>Production Path</h3>
+          <p>Architected from day one to swap mock data for a real database without a rewrite.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="section-label">Tech Stack</div>
+      <h2 class="section-title">Built with a modern, production-grade toolset</h2>
+      <p>Every choice was made with a real deployment in mind, not just a demo.</p>
+      <div class="pill-row">
+        <span class="pill">Next.js 14 (App Router)</span>
+        <span class="pill">TypeScript</span>
+        <span class="pill">Tailwind CSS</span>
+        <span class="pill">Prisma ORM</span>
+        <span class="pill">PostgreSQL (Supabase)</span>
+        <span class="pill">Supabase Storage</span>
+        <span class="pill">NextAuth.js</span>
+        <span class="pill">Recharts</span>
+        <span class="pill">Vercel</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-label">Key Features</div>
+      <h2 class="section-title">What's fully working</h2>
+      <ul class="feature-list">
+        <li><span class="check">✓</span> Menu browsing with live search, category filters, and price filters</li>
+        <li><span class="check">✓</span> Persistent shopping cart with quantity controls</li>
+        <li><span class="check">✓</span> Full checkout flow — delivery/pickup, payment method selection</li>
+        <li><span class="check">✓</span> Visual, real-time order status tracker (Placed → Confirmed → Preparing → Ready → Completed)</li>
+        <li><span class="check">✓</span> Admin CRUD for foods and categories, including availability toggles</li>
+        <li><span class="check">✓</span> Admin order pipeline — filter by status, update status, reflected instantly on the customer side</li>
+        <li><span class="check">✓</span> Dashboard analytics — revenue &amp; order trend charts, category performance, top sellers</li>
+        <li><span class="check">✓</span> Fully responsive across mobile, tablet, and desktop</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="section-label">Screenshots</div>
+      <h2 class="section-title">Product walkthrough</h2>
+      <p>Replace these placeholders with real screenshots once the UI is finalized.</p>
+      <div class="grid-2">
+        <div class="shot"><strong>Homepage</strong>Hero, featured categories, popular dishes</div>
+        <div class="shot"><strong>Menu &amp; Search</strong>Filtering, sorting, category tabs</div>
+        <div class="shot"><strong>Order Tracking</strong>Visual status pipeline</div>
+        <div class="shot"><strong>Admin Dashboard</strong>Revenue charts &amp; recent orders</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-label">Architecture Decisions</div>
+      <h2 class="section-title">Challenges &amp; how they were solved</h2>
+
+      <div class="challenge">
+        <span class="tag">Data layer</span>
+        <h3>Designing for a mock-to-real migration from day one</h3>
+        <p>
+          Rather than hardcoding data into components, all catalog and order state was
+          routed through dedicated React Context providers (<code>CatalogContext</code>,
+          <code>OrderContext</code>) with a shape matching the eventual Prisma schema.
+          This meant the entire admin CRUD experience could be built and fully tested
+          before a database even existed — and migrating to real API calls later is a
+          contained change, not a rewrite.
+        </p>
+      </div>
+
+      <div class="challenge">
+        <span class="tag">Database</span>
+        <h3>Serverless-safe Postgres connections</h3>
+        <p>
+          Supabase's connection pooler (PgBouncer) doesn't support prepared statements
+          the way some tooling expects. The project uses two distinct connection strings —
+          a pooled connection for the running app (safe under Vercel's serverless
+          concurrency) and a direct connection reserved for Prisma CLI migrations —
+          avoiding a class of connection-exhaustion bugs common in serverless deployments.
+        </p>
+      </div>
+
+      <div class="challenge">
+        <span class="tag">Content integrity</span>
+        <h3>Verifying every image against a live source</h3>
+        <p>
+          Placeholder imagery sourced from memory included several invalid CDN references.
+          Rather than leave broken images in a "finished" product, every food and category
+          image was individually verified against Unsplash's live search index and replaced
+          with confirmed-working URLs — a small detail, but the kind that separates a demo
+          from something a client can actually show customers.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="section-label">Project Status</div>
+      <h2 class="section-title">Where things stand</h2>
+      <table class="status-table">
+        <thead>
+          <tr><th>Area</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Frontend UI (customer + admin)</td><td><span class="badge badge-done">Complete</span></td></tr>
+          <tr><td>Live deployment (Vercel)</td><td><span class="badge badge-done">Complete</span></td></tr>
+          <tr><td>Database schema &amp; hosting (Supabase)</td><td><span class="badge badge-done">Complete</span></td></tr>
+          <tr><td>API layer connecting UI to database</td><td><span class="badge badge-progress">In Progress</span></td></tr>
+          <tr><td>Authentication &amp; protected admin routes</td><td><span class="badge badge-planned">Planned</span></td></tr>
+          <tr><td>Live payment gateway integration</td><td><span class="badge badge-planned">Planned</span></td></tr>
+          <tr><td>Image uploads via Supabase Storage</td><td><span class="badge badge-planned">Planned</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-label">What I'd do next</div>
+      <h2 class="section-title">Roadmap to full production</h2>
+      <p>
+        The remaining work follows a deliberate sequence: wire the admin dashboard and
+        storefront to real API routes backed by the Supabase database, add NextAuth-based
+        authentication to lock down the admin panel and support real customer accounts,
+        then layer in a live payment gateway suited to the target market, image uploads
+        through Supabase Storage, and transactional email notifications — each phase
+        tested in isolation before moving to the next.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <p style="color:#fff; font-size:16px; margin-bottom:6px;">Interested in the full build or working together?</p>
+      <p style="margin:0;">
+        <a href="https://dineflow-restaurant-two.vercel.app">Live Demo</a>
+        &nbsp;·&nbsp;
+        <a href="#">GitHub Repository</a>
+        &nbsp;·&nbsp;
+        <a href="#">LinkedIn</a>
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
