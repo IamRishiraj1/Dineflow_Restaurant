@@ -13,6 +13,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "card",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-002", name: "Smoky Beef Burger", price: 380, quantity: 2, image: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=200&q=80&auto=format&fit=crop" },
       { foodId: "food-009", name: "Golden French Fries", price: 150, quantity: 1, image: "https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?w=200&q=80&auto=format&fit=crop" },
@@ -32,6 +33,7 @@ export const mockOrders: Order[] = [
     orderType: "pickup",
     paymentMethod: "cash",
     paymentStatus: "pending",
+    paymentValId: null,
     items: [
       { foodId: "food-003", name: "Margherita Pizza", price: 540, quantity: 1, image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=200&q=80&auto=format&fit=crop" },
     ],
@@ -50,6 +52,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "card",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-018", name: "Crispy Fried Chicken Bucket", price: 690, quantity: 1, image: "https://images.unsplash.com/photo-1624153064067-566cae78993d?w=200&q=80&auto=format&fit=crop" },
       { foodId: "food-013", name: "Fresh Lime Soda", price: 110, quantity: 2, image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=200&q=80&auto=format&fit=crop" },
@@ -69,6 +72,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "cash",
     paymentStatus: "pending",
+    paymentValId: null,
     items: [
       { foodId: "food-005", name: "Alfredo Pasta", price: 420, quantity: 1, image: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=200&q=80&auto=format&fit=crop" },
       { foodId: "food-010", name: "Chocolate Fudge Brownie", price: 220, quantity: 1, image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?w=200&q=80&auto=format&fit=crop" },
@@ -88,6 +92,7 @@ export const mockOrders: Order[] = [
     orderType: "pickup",
     paymentMethod: "card",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-007", name: "Buffalo Chicken Wings", price: 350, quantity: 2, image: "https://images.unsplash.com/photo-1608039755401-742074f0548d?w=200&q=80&auto=format&fit=crop" },
     ],
@@ -106,6 +111,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "card",
     paymentStatus: "failed",
+    paymentValId: null,
     items: [
       { foodId: "food-015", name: "Pepperoni Pizza", price: 590, quantity: 1, image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=200&q=80&auto=format&fit=crop" },
     ],
@@ -124,6 +130,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "cash",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-016", name: "Double Cheese Beef Burger", price: 460, quantity: 1, image: "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=200&q=80&auto=format&fit=crop" },
       { foodId: "food-012", name: "Mango Lassi", price: 140, quantity: 2, image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=200&q=80&auto=format&fit=crop" },
@@ -143,6 +150,7 @@ export const mockOrders: Order[] = [
     orderType: "pickup",
     paymentMethod: "card",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-004", name: "Spicy Chicken Pizza", price: 620, quantity: 1, image: "https://images.unsplash.com/photo-1594007654729-407eedc4be65?w=200&q=80&auto=format&fit=crop" },
     ],
@@ -161,6 +169,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "card",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-008", name: "Honey Glazed Chicken", price: 390, quantity: 1, image: "https://images.unsplash.com/photo-1600555379765-f82335a7b1b0?w=200&q=80&auto=format&fit=crop" },
       { foodId: "food-011", name: "New York Cheesecake", price: 260, quantity: 1, image: "https://images.unsplash.com/photo-1547414368-ac947d00b91d?w=200&q=80&auto=format&fit=crop" },
@@ -180,6 +189,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "cash",
     paymentStatus: "pending",
+    paymentValId: null,
     items: [
       { foodId: "food-006", name: "Spicy Arrabbiata Pasta", price: 400, quantity: 1, image: "https://images.unsplash.com/photo-1608219992759-8d74ed8d76eb?w=200&q=80&auto=format&fit=crop" },
       { foodId: "food-014", name: "Soft Drinks (Can)", price: 60, quantity: 2, image: "https://images.unsplash.com/photo-1609951651467-713256d1a3be?w=200&q=80&auto=format&fit=crop" },
@@ -199,6 +209,7 @@ export const mockOrders: Order[] = [
     orderType: "pickup",
     paymentMethod: "card",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-001", name: "Classic Chicken Burger", price: 320, quantity: 3, image: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=200&q=80&auto=format&fit=crop" },
     ],
@@ -217,6 +228,7 @@ export const mockOrders: Order[] = [
     orderType: "delivery",
     paymentMethod: "card",
     paymentStatus: "paid",
+    paymentValId: null,
     items: [
       { foodId: "food-018", name: "Crispy Fried Chicken Bucket", price: 690, quantity: 1, image: "https://images.unsplash.com/photo-1624153064067-566cae78993d?w=200&q=80&auto=format&fit=crop" },
     ],

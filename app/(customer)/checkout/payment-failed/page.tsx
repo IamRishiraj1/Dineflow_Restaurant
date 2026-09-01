@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { XCircle, RefreshCw } from "lucide-react";
 import { LinkButton, Button } from "@/components/ui/Button";
@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useOrders } from "@/context/OrderContext";
 import { formatCurrency } from "@/lib/utils";
 
-export default function PaymentFailedPage() {
+function PaymentFailedContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order");
   const reason = searchParams.get("reason"); // "fail" | "cancel"
@@ -103,5 +103,19 @@ export default function PaymentFailedPage() {
         </LinkButton>
       </div>
     </div>
+  );
+}
+
+export default function PaymentFailedPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-xl px-4 py-16 sm:px-6 lg:px-8">
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      }
+    >
+      <PaymentFailedContent />
+    </Suspense>
   );
 }
