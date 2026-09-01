@@ -86,8 +86,28 @@ export default function CheckoutPage() {
         total,
       });
 
+      if (paymentMethod === "cash") {
+        clearCart();
+        router.push(`/order-confirmation/${order.id}`);
+        return;
+      }
+
+      // Card / mobile banking: the order now exists (paymentStatus
+      // "pending"), but isn't actually paid yet — hand off to SSLCommerz's
+      // hosted payment page. clearCart() happens now too, since the order
+      // is already saved server-side regardless of whether payment
+      // succeeds; a failed/cancelled payment doesn't need the cart back
+      // (the payment-failed page offers "Try Again" against this same
+      // order instead).
       clearCart();
-      router.push(`/order-confirmation/${order.id}`);
+      const res = await fetch("/api/payments/sslcommerz/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Couldn't start the payment. Please try again.");
+      window.location.href = body.gatewayUrl;
     } catch (err) {
       setIsSubmitting(false);
       setSubmitError(
@@ -235,7 +255,8 @@ export default function CheckoutPage() {
                 )}
               >
                 <CreditCard className={cn("h-5 w-5", paymentMethod === "card" ? "text-ember-600" : "text-ink-400")} />
-                <span className="text-sm font-semibold text-ink-900">Card</span>
+                <span className="text-sm font-semibold text-ink-900">Card / Mobile Banking</span>
+                <span className="text-xs text-ink-500">bKash, Nagad, Rocket, cards — via SSLCommerz</span>
               </button>
               <button
                 type="button"
@@ -251,19 +272,12 @@ export default function CheckoutPage() {
             </div>
 
             {paymentMethod === "card" && (
-              <div className="mt-4 grid grid-cols-1 gap-4 rounded-xl bg-ink-50 p-4 sm:grid-cols-2 animate-fade-in">
-                <div className="sm:col-span-2">
-                  <Input label="Card number" placeholder="4242 4242 4242 4242" disabled />
-                </div>
-                <Input label="Expiry" placeholder="MM/YY" disabled />
-                <Input label="CVC" placeholder="123" disabled />
+              <div className="mt-4 flex items-start gap-2 rounded-xl bg-ink-50 p-3.5 text-xs text-ink-600 animate-fade-in">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" />
+                You&apos;ll be redirected to SSLCommerz&apos;s secure payment page to complete this —
+                DineFlow never sees or stores your card or mobile banking details.
               </div>
             )}
-
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-ink-50 p-3.5 text-xs text-ink-500">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" />
-              This is a prototype — payment processing is mocked and no real charge will occur.
-            </div>
           </section>
         </div>
 
@@ -309,7 +323,13 @@ export default function CheckoutPage() {
             </p>
           )}
           <Button type="submit" fullWidth size="lg" disabled={isSubmitting}>
-            {isSubmitting ? "Placing order…" : "Place Order"}
+            {isSubmitting
+              ? paymentMethod === "card"
+                ? "Redirecting to payment…"
+                : "Placing order…"
+              : paymentMethod === "card"
+                ? "Continue to Payment"
+                : "Place Order"}
           </Button>
         </div>
       </form>

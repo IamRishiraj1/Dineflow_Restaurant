@@ -178,6 +178,18 @@ model Order {
   paymentStatus PaymentStatus @default(PENDING)
   status        OrderStatus   @default(PLACED)
 
+  // Set once SSLCommerz confirms a gateway payment (via their IPN webhook
+  // or the success-redirect handler — see app/api/payments/sslcommerz/).
+  // This is SSLCommerz's own validation id, kept so a support conversation
+  // ("my payment went through but the order still shows pending") can be
+  // traced back to the exact transaction on SSLCommerz's dashboard.
+  // Always null for Cash on Delivery orders. Note this is NOT the same as
+  // SSLCommerz's tran_id — tran_id is generated fresh per payment attempt
+  // (derived from orderNumber + a timestamp, so a retried payment doesn't
+  // collide) and isn't stored on the order at all, since every callback
+  // route looks the order up via `value_a` (our own order id) instead.
+  paymentValId String?
+
   subtotal              Int
   deliveryFee           Int
   total                 Int

@@ -86,6 +86,8 @@ export interface Order {
   status: OrderStatus;
   createdAt: string; // ISO date string
   estimatedReadyMinutes: number;
+  /** SSLCommerz's validation id once a gateway payment is confirmed. Always null for Cash on Delivery. */
+  paymentValId: string | null;
 }
 
 export interface Transaction {

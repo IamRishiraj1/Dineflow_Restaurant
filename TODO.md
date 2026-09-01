@@ -55,18 +55,24 @@ step needs me to write code, say "let's do step X" and I'll build it.
 
 ---
 
-## PHASE 4 — Real payments (post-launch, Cash on Delivery live first)
+## PHASE 4 — Real payments ✅ CODE COMPLETE (SSLCommerz)
 
 *Goal: customers can pay online, not just choose Cash on Delivery.*
 
-- [ ] Decide on gateway: SSLCommerz (recommended for Bangladesh) vs. bKash Merchant API vs. Stripe
-- [ ] Register a merchant account with the chosen provider (this can take a few business days — start early)
-- [ ] Get sandbox/test API keys from the provider
-- [ ] Build the checkout → payment redirect flow (customer is sent to the gateway's hosted payment page)
-- [ ] Build a webhook/callback API route that receives payment confirmation and updates `Order.paymentStatus`
-- [ ] Test thoroughly in the gateway's sandbox mode before going live
-- [ ] Switch from sandbox keys to live keys only once testing is solid
-- [ ] Update the checkout UI to remove the "payment is mocked" notice
+- [x] Decided on gateway: **SSLCommerz** — best fit for a Bangladeshi restaurant, one integration covers cards + bKash + Nagad + Rocket + bank transfer, and its sandbox needs no business verification (good for portfolio demo purposes too)
+- [x] Built `lib/sslcommerz.ts` — session initiation + server-to-server validation, following SSLCommerz's documented Session API v4 contract
+- [x] Built the checkout → payment redirect flow (`app/api/payments/sslcommerz/init/route.ts`, wired into checkout page)
+- [x] Built success/fail/cancel redirect handlers AND an IPN webhook handler for reliability (see `docs/PHASE-4-PAYMENT-SETUP.md` for why both exist)
+- [x] Built a `/checkout/payment-failed` page with a "Try Payment Again" retry flow against the same order
+- [x] Removed the old "payment is mocked" fake card-number form fields from checkout
+- [x] **Fixed a real bug found during review:** order creation was still marking `card` payments as `PAID` immediately at checkout, before the customer ever reached SSLCommerz — this would have permanently blocked failed/cancelled payments from ever being correctly marked `FAILED`. Now every order starts `PENDING` regardless of method; only a validated SSLCommerz confirmation (or COD collection, handled elsewhere) marks it paid.
+- [ ] **YOU NEED TO DO THIS:** sign up for a free SSLCommerz sandbox account — see `docs/PHASE-4-PAYMENT-SETUP.md` for exact steps
+- [ ] **YOU NEED TO DO THIS:** run `npm run db:push` (new field: `Order.paymentValId`)
+- [ ] Test a full successful sandbox payment end-to-end
+- [ ] Test a failed/cancelled payment + the retry flow
+- [ ] ⚠️ Unverified: `lib/sslcommerz.ts` was written from training knowledge of SSLCommerz's API, in a sandbox with no internet access to check it against their live docs. Cross-check field names against https://developer.sslcommerz.com/doc/v4/ if the sandbox test doesn't work as expected — see the honesty note at the top of that file.
+- [ ] Register a **live** merchant account only once you have a real client ready to accept real payments (requires business documents, takes a few business days — see the last section of the setup doc)
+- [ ] Switch `SSLCOMMERZ_IS_LIVE` to `"true"` with live credentials only after live testing
 
 ---
 

@@ -151,6 +151,7 @@ export function serializeOrder(o: PrismaOrderWithItems): Order {
     status: ORDER_STATUS_TO_APP[o.status],
     createdAt: o.createdAt.toISOString(),
     estimatedReadyMinutes: o.estimatedReadyMinutes,
+    paymentValId: o.paymentValId,
   };
 }
 

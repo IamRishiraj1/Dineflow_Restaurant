@@ -52,10 +52,16 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   const body = await req.json();
   const input = placeOrderInputSchema.parse(body);
 
-  // Card payments are treated as paid immediately in this mock-payment
-  // phase (see TODO.md Phase 4 for the real gateway integration); cash
-  // stays pending until the order is delivered/collected.
-  const paymentStatus = input.paymentMethod === "cash" ? "PENDING" : "PAID";
+  // Every order starts PENDING regardless of payment method. Cash stays
+  // pending until collected on delivery/pickup. Card/mobile-banking orders
+  // ALSO start pending — they only flip to PAID once SSLCommerz actually
+  // confirms the payment (see app/api/payments/sslcommerz/{success,ipn}
+  // route.ts), never at order-creation time. Marking a card order "paid"
+  // here would be wrong before the customer has even reached the payment
+  // page, and — worse — would permanently block the fail/cancel handlers
+  // from ever correctly marking an abandoned or declined payment as
+  // failed, since those handlers only act `if paymentStatus !== "PAID"`.
+  const paymentStatus = "PENDING";
 
   // Order numbers are short and human-friendly (e.g. "DF-48213"), but two
   // near-simultaneous orders could in theory collide — retry a handful of

@@ -338,4 +338,117 @@ very next thing to help with. Have them run `git status` and
 `git remote -v` first to confirm what they're working with before
 touching anything.
 
+---
+
+## Session 4: GitHub push confirmed + Phase 4 (real payments) — SSLCommerz
+
+**GitHub is now confirmed synced** — the user's branch was already "up to
+date with origin/main" (no divergence, no force-push needed), so a normal
+`git add . && git commit && git push` resolved it cleanly. Not documenting
+further here since it's simply done.
+
+**Phase 4 decision:** user explicitly asked me to decide, given the goal
+is "prove I can build business-handover-ready sites, then sell this to a
+real client." Chose **SSLCommerz** over bKash-only (too narrow — a real
+client wants cards too) or Stripe (not natively available to Bangladeshi
+merchants; would need a foreign business entity, which contradicts "sell
+to a local client"). SSLCommerz's sandbox also needs no business
+verification, which matters for a portfolio piece that needs to be fully
+demonstrable today.
+
+### Important: this phase's code was mostly already written when I started
+
+When I went to build Phase 4, I found a **substantial, already-complete
+SSLCommerz integration** sitting in the project — `lib/sslcommerz.ts`,
+five API route handlers (`init`/`success`/`fail`/`cancel`/`ipn`), a
+rewritten checkout page, a new `payment-failed` page, schema changes, and
+`.env.example` entries — none of which I had written in this session.
+
+**This is the same unexplained-pre-existing-file pattern that showed up
+twice earlier in this project** (once with a full `dineflow` folder at the
+very start of the conversation, once with `prisma/schema.prisma` +
+`lib/prisma.ts` right before Phase 1). Each time, the content has been
+plain, inspectable application code — not something that could hide
+instructions directed at me — so the right response isn't blind distrust,
+but it isn't blind trust either. **What I did this time, since the stakes
+are much higher (payment code, not boilerplate):** read every single file
+in full before deciding whether to keep it, specifically checking for
+security correctness (does it actually validate server-to-server before
+trusting a payment succeeded? does it handle retries/idempotency
+correctly?) rather than just checking it "looks reasonable."
+
+**Verdict after full review: genuinely well-built.** Correct SSLCommerz
+API v4 field names (matches my own training knowledge of their documented
+contract), correct security posture (never trusts a redirect or webhook
+body directly — always re-validates server-to-server via `val_id` before
+marking anything paid), correct idempotency (checks `paymentStatus !==
+"PAID"` before reprocessing, so the success-redirect and IPN webhook
+racing each other can't double-process), correct reasoning for *why* both
+a browser-redirect AND a server-to-server IPN webhook exist (redirect can
+be interrupted; IPN is the reliable fallback). This is the same
+architecture I was about to design from scratch.
+
+**One real, serious bug found and fixed:** `app/api/orders/route.ts` was
+still setting `paymentStatus: "PAID"` immediately for `card` orders at
+creation time — leftover from the Phase 2 mock-payment logic
+(`input.paymentMethod === "cash" ? "PENDING" : "PAID"`), never updated
+when the real SSLCommerz flow was built around it. This is a serious bug,
+not cosmetic: combined with the fail/cancel handlers' idempotency guard
+(`if order.paymentStatus !== "PAID"`), an order would be marked paid
+*before the customer ever paid*, and a subsequently failed or abandoned
+payment could **never** be corrected back to `FAILED` — the system would
+permanently show an unpaid order as paid. **Fixed**: every order now
+starts `PENDING` regardless of payment method; only a validated
+SSLCommerz confirmation (or COD collection) marks it paid.
+
+**Minor fixes while reviewing:**
+- Corrected a stale/inaccurate comment on `Order.paymentValId` in
+  `prisma/schema.prisma` (it claimed `orderNumber` was reused directly as
+  SSLCommerz's `tran_id`; the actual code derives a fresh per-attempt
+  `tran_id` from it instead — the comment now matches the code).
+- Wrote `docs/PHASE-4-PAYMENT-SETUP.md`, which `.env.example` already
+  referenced but which didn't exist yet.
+- Updated `TODO.md`'s Phase 4 section to reflect what's actually built
+  vs. what the user still needs to do (sandbox signup, `db:push`, testing).
+
+### ⚠️ Action required before this can be tested
+
+1. **Sign up for a free SSLCommerz sandbox account** — full instructions
+   in `docs/PHASE-4-PAYMENT-SETUP.md`. No business verification needed,
+   takes a few minutes.
+2. Add `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, and
+   `SSLCOMMERZ_IS_LIVE="false"` to both `.env` and `.env.local`.
+3. `npm run db:push` — new field (`Order.paymentValId`).
+4. `npm run dev`, place a test order with "Card / Mobile Banking"
+   selected, complete a test payment using SSLCommerz's sandbox test
+   credentials (shown on their own payment page).
+5. Also deliberately test a failed/cancelled payment and the "Try Payment
+   Again" retry flow.
+6. Verify in Prisma Studio (`npm run db:studio`) that successful orders
+   show `paymentStatus: PAID` with a `paymentValId` filled in, and
+   failed/cancelled ones show `paymentStatus: FAILED`.
+7. **⚠️ Explicitly flagged in `lib/sslcommerz.ts`'s own comments and in
+   `TODO.md`:** this was written from training knowledge with no way to
+   verify it against SSLCommerz's live docs in this sandbox. If the test
+   payment doesn't redirect correctly or fields seem wrong, cross-check
+   against https://developer.sslcommerz.com/doc/v4/ before assuming the
+   user's setup is at fault.
+8. Once working, `git add . && git commit && git push` (should be a
+   clean push — no divergence exists as of this session).
+
+### If you're a new Claude session picking this up from here
+
+- Read the "If you're a new Claude session" section above (Session 2) —
+  it still applies generally.
+- **Specifically for Phase 4:** don't assume the SSLCommerz integration
+  works just because it was reviewed and looks correct — "looks correct
+  on read-through" and "actually works against SSLCommerz's real sandbox"
+  are different claims, and only the user's test can confirm the latter.
+  Ask for their test results, and if something's wrong, check the
+  live API docs before editing `lib/sslcommerz.ts` blind.
+- If Phase 4 is confirmed working, Phase 5 (image uploads via Supabase
+  Storage) or Phase 6 (email notifications, already scoped in `TODO.md`)
+  are the natural next steps — ask the user which they'd prefer, same as
+  every other phase choice in this project so far.
+
 
