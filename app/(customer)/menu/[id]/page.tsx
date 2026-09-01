@@ -15,7 +15,7 @@ import { FoodCard } from "@/components/customer/FoodCard";
 import { formatCurrency, clamp } from "@/lib/utils";
 
 export default function FoodDetailsPage({ params }: { params: { id: string } }) {
-  const { foods, categories } = useCatalog();
+  const { foods, categories, isLoading } = useCatalog();
   const { addToCart } = useCart();
   const { showToast } = useToast();
   const router = useRouter();
@@ -24,7 +24,23 @@ export default function FoodDetailsPage({ params }: { params: { id: string } }) 
 
   const food = foods.find((f) => f.id === params.id || f.slug === params.id);
 
+  // Don't 404 while the catalog is still loading — only once loading has
+  // finished and the food genuinely isn't in the list.
   if (!food) {
+    if (isLoading) {
+      return (
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+            <div className="aspect-square w-full animate-pulse rounded-2xl bg-ink-100" />
+            <div className="space-y-4">
+              <div className="h-8 w-2/3 animate-pulse rounded-lg bg-ink-100" />
+              <div className="h-4 w-full animate-pulse rounded-lg bg-ink-100" />
+              <div className="h-4 w-3/4 animate-pulse rounded-lg bg-ink-100" />
+            </div>
+          </div>
+        </div>
+      );
+    }
     notFound();
   }
 
@@ -32,7 +48,7 @@ export default function FoodDetailsPage({ params }: { params: { id: string } }) 
   const related = foods.filter((f) => f.categoryId === food.categoryId && f.id !== food.id).slice(0, 4);
 
   function handleAddToCart() {
-    if (!food?.isAvailable) return;
+    if (!food.isAvailable) return;
     addToCart(food.id, quantity);
     showToast(`${quantity} × ${food.name} added to cart`, "success");
   }

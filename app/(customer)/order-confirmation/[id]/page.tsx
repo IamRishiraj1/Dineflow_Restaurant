@@ -1,18 +1,42 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Clock } from "lucide-react";
 import { useOrders } from "@/context/OrderContext";
 import { LinkButton } from "@/components/ui/Button";
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCurrency } from "@/lib/utils";
+import { Order } from "@/types";
 
 export default function OrderConfirmationPage({ params }: { params: { id: string } }) {
-  const { getOrder } = useOrders();
-  const order = getOrder(params.id);
+  const { fetchOrder } = useOrders();
+  const [order, setOrder] = useState<Order | null | undefined>(undefined); // undefined = loading
 
-  if (!order) {
+  useEffect(() => {
+    let cancelled = false;
+    fetchOrder(params.id).then((result) => {
+      if (!cancelled) setOrder(result ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
+
+  if (order === undefined) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-14 sm:px-6 lg:px-8">
+        <Skeleton className="mx-auto h-16 w-16 rounded-full" />
+        <Skeleton className="mx-auto mt-5 h-8 w-64 rounded-lg" />
+        <Skeleton className="mt-8 h-80 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (order === null) {
     notFound();
   }
 

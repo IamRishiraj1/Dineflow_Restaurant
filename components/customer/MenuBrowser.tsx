@@ -21,7 +21,7 @@ const PRICE_RANGES = [
 
 export function MenuBrowser() {
   const searchParams = useSearchParams();
-  const { foods, categories } = useCatalog();
+  const { foods, categories, isLoading } = useCatalog();
 
   const [query, setQuery] = useState(searchParams.get("search") ?? "");
   const [activeCategory, setActiveCategory] = useState(searchParams.get("category") ?? "all");
@@ -148,24 +148,40 @@ export function MenuBrowser() {
       </div>
 
       {/* Results */}
-      <p className="mt-6 text-sm text-ink-500">
-        {filtered.length} {filtered.length === 1 ? "dish" : "dishes"} found
-      </p>
-
-      {filtered.length === 0 ? (
-        <div className="mt-4">
-          <EmptyState
-            icon={UtensilsCrossed}
-            title="No dishes match your search"
-            description="Try a different keyword, category, or price range."
-          />
-        </div>
-      ) : (
-        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((food) => (
-            <FoodCard key={food.id} food={food} />
+      {isLoading ? (
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="overflow-hidden rounded-2xl bg-white shadow-card">
+              <div className="aspect-[4/3] w-full animate-pulse bg-ink-100" />
+              <div className="space-y-2 p-4">
+                <div className="h-4 w-2/3 animate-pulse rounded bg-ink-100" />
+                <div className="h-3 w-full animate-pulse rounded bg-ink-100" />
+              </div>
+            </div>
           ))}
         </div>
+      ) : (
+        <>
+          <p className="mt-6 text-sm text-ink-500">
+            {filtered.length} {filtered.length === 1 ? "dish" : "dishes"} found
+          </p>
+
+          {filtered.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                icon={UtensilsCrossed}
+                title="No dishes match your search"
+                description="Try a different keyword, category, or price range."
+              />
+            </div>
+          ) : (
+            <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filtered.map((food) => (
+                <FoodCard key={food.id} food={food} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

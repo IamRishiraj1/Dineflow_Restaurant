@@ -2,16 +2,28 @@
 
 import { ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useCatalog } from "@/context/CatalogContext";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkButton } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function CartPage() {
   const { items, subtotal, deliveryFee, total, updateQuantity, removeFromCart, isHydrated } = useCart();
+  const { isLoading: catalogLoading } = useCatalog();
 
-  if (!isHydrated) {
-    return <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8" />;
+  // Wait for both: the cart's own localStorage read, AND the catalog fetch
+  // that resolves each cart entry into a full Food object. Without this,
+  // a cart with real items could flash "Your cart is empty" for a moment
+  // on a fresh page load, before the catalog finishes loading.
+  if (!isHydrated || catalogLoading) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+        <Skeleton className="h-9 w-48 rounded-lg" />
+        <Skeleton className="mt-6 h-64 w-full rounded-2xl" />
+      </div>
+    );
   }
 
   if (items.length === 0) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ClipboardList } from "lucide-react";
 import { useOrders } from "@/context/OrderContext";
 import { useToast } from "@/context/ToastContext";
@@ -9,6 +9,7 @@ import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { cn, formatCurrency, formatDateTime } from "@/lib/utils";
 
 const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
@@ -24,15 +25,33 @@ const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
 const STATUS_OPTIONS: OrderStatus[] = ["placed", "confirmed", "preparing", "ready", "completed", "cancelled"];
 
 export default function AdminOrdersPage() {
-  const { orders, updateOrderStatus } = useOrders();
+  const { orders, isLoading, error, updateOrderStatus, loadAll } = useOrders();
   const { showToast } = useToast();
   const [activeFilter, setActiveFilter] = useState<OrderStatus | "all">("all");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(() => {
     const sorted = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     if (activeFilter === "all") return sorted;
     return sorted.filter((o) => o.status === activeFilter);
   }, [orders, activeFilter]);
+
+  async function handleStatusChange(orderId: string, orderNumber: string, status: OrderStatus) {
+    setUpdatingId(orderId);
+    try {
+      await updateOrderStatus(orderId, status);
+      showToast(`${orderNumber} marked as ${status}`, "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't update order status", "error");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
   return (
     <div>
@@ -53,8 +72,20 @@ export default function AdminOrdersPage() {
         ))}
       </div>
 
+      {error && (
+        <p role="alert" className="mt-4 rounded-xl bg-error-50 px-4 py-3 text-sm text-error-600">
+          {error}
+        </p>
+      )}
+
       <div className="mt-5 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-card">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-3 p-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="p-6">
             <EmptyState icon={ClipboardList} title="No orders here" description="Nothing matches this filter yet." />
           </div>
@@ -93,10 +124,10 @@ export default function AdminOrdersPage() {
                         <Select
                           aria-label={`Update status for ${order.orderNumber}`}
                           value={order.status}
-                          onChange={(e) => {
-                            updateOrderStatus(order.id, e.target.value as OrderStatus);
-                            showToast(`${order.orderNumber} marked as ${e.target.value}`, "success");
-                          }}
+                          disabled={updatingId === order.id}
+                          onChange={(e) =>
+                            handleStatusChange(order.id, order.orderNumber, e.target.value as OrderStatus)
+                          }
                           className="h-8 min-w-[9.5rem] py-0 text-xs"
                         >
                           {STATUS_OPTIONS.map((status) => (

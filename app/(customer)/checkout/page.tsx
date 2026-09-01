@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CreditCard, Banknote, Truck, Store, Info, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useCatalog } from "@/context/CatalogContext";
 import { useOrders } from "@/context/OrderContext";
 import { Input } from "@/components/ui/Input";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { formatCurrency, cn } from "@/lib/utils";
 import { OrderType, PaymentMethod } from "@/types";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface FormState {
   fullName: string;
@@ -32,6 +34,7 @@ const INITIAL_FORM: FormState = {
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart, isHydrated } = useCart();
+  const { isLoading: catalogLoading } = useCatalog();
   const { placeOrder } = useOrders();
   const router = useRouter();
 
@@ -40,6 +43,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const deliveryFee = orderType === "delivery" ? 60 : 0;
   const total = subtotal + deliveryFee;
@@ -62,31 +66,45 @@ export default function CheckoutPage() {
     return Object.keys(next).length === 0;
   }
 
-  function handlePlaceOrder(e: React.FormEvent) {
+  async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
 
-    const order = placeOrder({
-      customer: { fullName: form.fullName.trim(), email: form.email.trim(), phone: form.phone.trim() },
-      delivery:
-        orderType === "delivery"
-          ? { address: form.address.trim(), city: form.city.trim(), postalCode: form.postalCode.trim() }
-          : null,
-      orderType,
-      paymentMethod,
-      items,
-      subtotal,
-      deliveryFee,
-      total,
-    });
+    try {
+      const order = await placeOrder({
+        customer: { fullName: form.fullName.trim(), email: form.email.trim(), phone: form.phone.trim() },
+        delivery:
+          orderType === "delivery"
+            ? { address: form.address.trim(), city: form.city.trim(), postalCode: form.postalCode.trim() }
+            : null,
+        orderType,
+        paymentMethod,
+        items,
+        subtotal,
+        deliveryFee,
+        total,
+      });
 
-    clearCart();
-    router.push(`/order-confirmation/${order.id}`);
+      clearCart();
+      router.push(`/order-confirmation/${order.id}`);
+    } catch (err) {
+      setIsSubmitting(false);
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong placing your order. Please try again."
+      );
+    }
   }
 
-  if (!isHydrated) {
-    return <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8" />;
+  if (!isHydrated || catalogLoading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <Skeleton className="h-9 w-48 rounded-lg" />
+        <Skeleton className="mt-6 h-96 w-full rounded-2xl" />
+      </div>
+    );
   }
 
   if (items.length === 0) {
@@ -285,6 +303,11 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {submitError && (
+            <p role="alert" className="rounded-xl bg-error-50 px-4 py-3 text-sm text-error-600">
+              {submitError}
+            </p>
+          )}
           <Button type="submit" fullWidth size="lg" disabled={isSubmitting}>
             {isSubmitting ? "Placing order…" : "Place Order"}
           </Button>

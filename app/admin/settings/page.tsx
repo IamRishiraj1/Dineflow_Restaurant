@@ -1,17 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { defaultRestaurantSettings } from "@/data/restaurant";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/context/ToastContext";
 import { RestaurantSettings } from "@/types";
 
 export default function AdminSettingsPage() {
   const { showToast } = useToast();
   const [settings, setSettings] = useState<RestaurantSettings>(defaultRestaurantSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setSettings(data);
+      })
+      .catch(() => {
+        showToast("Couldn't load settings — showing defaults", "error");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function updateHours(day: string, field: "isOpen" | "open" | "close", value: string | boolean) {
     setSettings((prev) => ({
@@ -20,9 +42,37 @@ export default function AdminSettingsPage() {
     }));
   }
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    showToast("Settings saved (mock — not persisted to a server)", "success");
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to save settings");
+      }
+      const updated = await res.json();
+      setSettings(updated);
+      showToast("Settings saved", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't save settings", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl space-y-6">
+        <Skeleton className="h-48 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
+      </div>
+    );
   }
 
   return (
@@ -126,8 +176,8 @@ export default function AdminSettingsPage() {
         </div>
       </section>
 
-      <Button type="submit">
-        <Save className="h-4 w-4" /> Save Settings
+      <Button type="submit" disabled={isSaving}>
+        <Save className="h-4 w-4" /> {isSaving ? "Saving…" : "Save Settings"}
       </Button>
     </form>
   );

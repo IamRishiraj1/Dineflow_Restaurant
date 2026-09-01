@@ -1,18 +1,8 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { Order, OrderStatus, OrderType, PaymentMethod } from "@/types";
-import { mockOrders } from "@/data/orders";
-import { generateId, generateOrderNumber } from "@/lib/utils";
 import { CartLine } from "./CartContext";
-
-const STORAGE_KEY = "dineflow_orders";
 
 export interface PlaceOrderInput {
   customer: { fullName: string; email: string; phone: string };
@@ -27,83 +17,157 @@ export interface PlaceOrderInput {
 
 interface OrderContextValue {
   orders: Order[];
-  placeOrder: (input: PlaceOrderInput) => Order;
+  isLoading: boolean;
+  error: string | null;
+  placeOrder: (input: PlaceOrderInput) => Promise<Order>;
   getOrder: (id: string) => Order | undefined;
-  updateOrderStatus: (id: string, status: OrderStatus) => void;
-  updatePaymentStatus: (id: string, status: Order["paymentStatus"]) => void;
+  fetchOrder: (id: string) => Promise<Order | undefined>;
+  updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  updatePaymentStatus: (id: string, status: Order["paymentStatus"]) => Promise<void>;
+  /** Admin-only: loads every order. Call from an admin page's own effect —
+   *  see note below on why this isn't fetched automatically for everyone. */
+  loadAll: () => Promise<void>;
+  /** Loads only the logged-in customer's own orders. Call from My Orders. */
+  loadMine: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextValue | undefined>(undefined);
 
+async function unwrap<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed (${res.status})`);
+  }
+  return res.json();
+}
+
 export function OrderProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // On mount, merge any locally-placed orders (from a previous session)
-  // on top of the base mock orders.
-  useEffect(() => {
+  // Unlike CatalogContext, this does NOT eagerly fetch on mount. Orders now
+  // require authentication to list (GET /api/orders needs an admin
+  // session; GET /api/orders?mine=true needs any session) — and
+  // OrderProvider wraps the ENTIRE app, including pages a logged-out
+  // visitor sees. Auto-fetching here would fire an API call that 401s on
+  // every single page load for every anonymous visitor. Instead, the
+  // specific pages that need a list of orders (admin pages call loadAll();
+  // My Orders calls loadMine()) trigger the fetch themselves, once, in
+  // their own effect.
+  async function loadAll() {
+    setIsLoading(true);
+    setError(null);
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const savedOrders: Order[] = JSON.parse(stored);
-        // savedOrders already includes the full list (mock + placed) from
-        // last session, so it fully replaces the initial mock-only state.
-        setOrders(savedOrders);
-      }
-    } catch {
-      // ignore malformed storage, fall back to mock orders
+      const res = await fetch("/api/orders");
+      const data = await unwrap<Order[]>(res);
+      setOrders(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load orders.");
     } finally {
-      setIsHydrated(true);
+      setIsLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (!isHydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-  }, [orders, isHydrated]);
-
-  function placeOrder(input: PlaceOrderInput): Order {
-    const newOrder: Order = {
-      id: generateId("ord"),
-      orderNumber: generateOrderNumber(),
-      customer: input.customer,
-      delivery: input.delivery,
-      orderType: input.orderType,
-      paymentMethod: input.paymentMethod,
-      paymentStatus: input.paymentMethod === "cash" ? "pending" : "paid",
-      items: input.items.map((line) => ({
-        foodId: line.food.id,
-        name: line.food.name,
-        price: line.food.price,
-        quantity: line.quantity,
-        image: line.food.image,
-      })),
-      subtotal: input.subtotal,
-      deliveryFee: input.deliveryFee,
-      total: input.total,
-      status: "placed",
-      createdAt: new Date().toISOString(),
-      estimatedReadyMinutes: 25 + Math.round(Math.random() * 15),
-    };
-    setOrders((prev) => [newOrder, ...prev]);
-    return newOrder;
   }
 
+  async function loadMine() {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/orders?mine=true");
+      const data = await unwrap<Order[]>(res);
+      setOrders(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load your orders.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function placeOrder(input: PlaceOrderInput): Promise<Order> {
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer: input.customer,
+        delivery: input.delivery,
+        orderType: input.orderType,
+        paymentMethod: input.paymentMethod,
+        items: input.items.map((line) => ({
+          foodId: line.food.id,
+          name: line.food.name,
+          price: line.food.price,
+          quantity: line.quantity,
+          image: line.food.image,
+        })),
+        subtotal: input.subtotal,
+        deliveryFee: input.deliveryFee,
+        total: input.total,
+      }),
+    });
+    const created = await unwrap<Order>(res);
+    setOrders((prev) => [created, ...prev]);
+    return created;
+  }
+
+  // Synchronous lookup against whatever's already loaded in state. Used by
+  // pages that render inside the same session as placeOrder() (checkout ->
+  // confirmation -> tracking), where the order is already in memory.
   function getOrder(id: string) {
     return orders.find((o) => o.id === id || o.orderNumber === id);
   }
 
-  function updateOrderStatus(id: string, status: OrderStatus) {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+  // Fetches a single order directly from the API — used when a page is
+  // opened fresh (e.g. a reload, or a shared link) and the order may not
+  // yet be in the context's in-memory list. This endpoint is intentionally
+  // open (no auth) — see the comment in app/api/orders/[id]/route.ts.
+  async function fetchOrder(id: string): Promise<Order | undefined> {
+    const cached = getOrder(id);
+    if (cached) return cached;
+    try {
+      const res = await fetch(`/api/orders/${id}`);
+      if (res.status === 404) return undefined;
+      const order = await unwrap<Order>(res);
+      setOrders((prev) => (prev.some((o) => o.id === order.id) ? prev : [order, ...prev]));
+      return order;
+    } catch {
+      return undefined;
+    }
   }
 
-  function updatePaymentStatus(id: string, status: Order["paymentStatus"]) {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, paymentStatus: status } : o)));
+  async function updateOrderStatus(id: string, status: OrderStatus) {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const updated = await unwrap<Order>(res);
+    setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
+  }
+
+  async function updatePaymentStatus(id: string, paymentStatus: Order["paymentStatus"]) {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentStatus }),
+    });
+    const updated = await unwrap<Order>(res);
+    setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
   }
 
   return (
     <OrderContext.Provider
-      value={{ orders, placeOrder, getOrder, updateOrderStatus, updatePaymentStatus }}
+      value={{
+        orders,
+        isLoading,
+        error,
+        placeOrder,
+        getOrder,
+        fetchOrder,
+        updateOrderStatus,
+        updatePaymentStatus,
+        loadAll,
+        loadMine,
+      }}
     >
       {children}
     </OrderContext.Provider>

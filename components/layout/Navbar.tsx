@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChefHat, Search, ShoppingBag, User, Menu, X } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { ChefHat, Search, ShoppingBag, User, Menu, X, LogOut } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 const NAV_LINKS = [
@@ -16,6 +17,7 @@ const NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { itemCount } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -99,13 +101,40 @@ export function Navbar() {
             )}
           </Link>
 
-          <Link
-            href="/login"
-            className="hidden h-10 items-center gap-1.5 rounded-full border border-ink-200 px-4 text-sm font-medium text-ink-800 hover:bg-ink-100 sm:flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400"
-          >
-            <User className="h-4 w-4" />
-            Login
-          </Link>
+          {status === "authenticated" ? (
+            <div className="hidden items-center gap-1.5 sm:flex">
+              {session.user.role === "ADMIN" && (
+                <Link
+                  href="/admin"
+                  className="hidden h-10 items-center rounded-full border border-ink-200 px-3.5 text-sm font-medium text-ink-800 hover:bg-ink-100 lg:flex"
+                >
+                  Admin
+                </Link>
+              )}
+              <Link
+                href="/my-orders"
+                className="flex h-10 items-center gap-1.5 rounded-full border border-ink-200 px-4 text-sm font-medium text-ink-800 hover:bg-ink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400"
+              >
+                <User className="h-4 w-4" />
+                {session.user.name?.split(" ")[0] ?? "Account"}
+              </Link>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                aria-label="Log out"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-ink-500 hover:bg-ink-100 hover:text-ink-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden h-10 items-center gap-1.5 rounded-full border border-ink-200 px-4 text-sm font-medium text-ink-800 hover:bg-ink-100 sm:flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400"
+            >
+              <User className="h-4 w-4" />
+              Login
+            </Link>
+          )}
 
           <button
             onClick={() => setMobileOpen((v) => !v)}
@@ -142,12 +171,33 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link href="/login" className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink-800 hover:bg-ink-100">
-              Login / Register
-            </Link>
-            <Link href="/my-orders" className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink-800 hover:bg-ink-100">
-              My Orders
-            </Link>
+            {status === "authenticated" ? (
+              <>
+                {session.user.role === "ADMIN" && (
+                  <Link href="/admin" className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink-800 hover:bg-ink-100">
+                    Admin Dashboard
+                  </Link>
+                )}
+                <Link href="/my-orders" className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink-800 hover:bg-ink-100">
+                  My Orders
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-ink-800 hover:bg-ink-100"
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink-800 hover:bg-ink-100">
+                  Login / Register
+                </Link>
+                <Link href="/my-orders" className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink-800 hover:bg-ink-100">
+                  My Orders
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       )}

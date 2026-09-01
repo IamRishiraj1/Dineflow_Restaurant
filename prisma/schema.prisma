@@ -117,8 +117,8 @@ model Food {
   isPopular       Boolean  @default(false)
   isFeatured      Boolean  @default(false)
 
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   orderItems OrderItem[]
 

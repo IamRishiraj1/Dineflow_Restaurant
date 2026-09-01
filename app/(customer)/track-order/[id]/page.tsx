@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, Store, Phone } from "lucide-react";
@@ -8,13 +8,44 @@ import { useOrders } from "@/context/OrderContext";
 import { OrderTracker } from "@/components/order/OrderTracker";
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
 import { LinkButton } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { Order } from "@/types";
 
 export default function TrackOrderPage({ params }: { params: { id: string } }) {
-  const { getOrder } = useOrders();
-  const order = getOrder(params.id);
+  const { fetchOrder } = useOrders();
+  const [order, setOrder] = useState<Order | null | undefined>(undefined);
 
-  if (!order) {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const result = await fetchOrder(params.id);
+      if (!cancelled) setOrder(result ?? null);
+    }
+    load();
+
+    // Poll for status changes every 8 seconds, so an admin updating the
+    // order in another tab/device shows up here without a manual refresh.
+    const interval = window.setInterval(load, 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
+
+  if (order === undefined) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+        <Skeleton className="h-8 w-56 rounded-lg" />
+        <Skeleton className="mt-8 h-40 w-full rounded-2xl" />
+        <Skeleton className="mt-6 h-32 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (order === null) {
     notFound();
   }
 

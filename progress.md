@@ -1,233 +1,341 @@
 # DineFlow — Progress & Handoff Notes
 
 **Read this file first if you're picking up this project in a new session.**
-It explains exactly what's done, what's half-done, what's untested, and
-what to do next — written so another Claude session (or a human developer)
-can continue without re-deriving context from scratch.
-
-Also read `TODO.md` for the full phase-by-phase roadmap — this file is the
-detailed "state of the code right now" companion to that checklist.
+`TODO.md` has the full phase-by-phase roadmap; this file is the detailed
+"what actually happened and why" companion — written so another Claude
+session (or a human developer) can continue without re-deriving context.
 
 ---
 
-## Where things stand (big picture)
+## Important context: this was a MERGE session
 
-| Phase | Status |
-|---|---|
-| 1 — Database (Supabase + Prisma schema + seed) | ✅ Done, confirmed working by user |
-| Live deployment on Vercel | ✅ Done, confirmed working by user |
-| Broken mock image URLs | ✅ Fixed, confirmed working by user |
-| 2 — Connect app to real database (API routes + context rewrite) | 🟡 **Code complete, NOT yet tested by the user** |
-| 3 — Real authentication | ⬜ Not started |
-| 4–10 | ⬜ Not started |
+The user had previously taken the Phase-2-complete zip I built and, instead
+of testing it directly, ran a **separate, parallel session using Claude
+Code** (evidenced by a `CLAUDE.md` file and `.git` history in what they
+uploaded as `dineflow_v2.zip`). That parallel session:
 
-**The most important thing to know:** Phase 2's code is fully written but
-has never actually been run against a live database. I (the AI) have no
-network access in my sandbox, so everything below was written carefully
-and manually verified (brace/paren balance, cross-checked every import
-against its export, checked Prisma enum types match), but it has not been
-compiled or executed. **The very next step is for the user to actually run
-it and report back what breaks**, if anything.
+- Started from the git history point *right after* the Unsplash image
+  fixes — **before** my Phase 2 zip's changes were ever applied
+- Built its own (smaller) version of Phase 2: only Categories + Foods API
+  routes, no Orders or Settings API, and no admin route protection
+- Then built real Phase 3 authentication: NextAuth.js with a Credentials
+  provider, `lib/auth.ts`, `lib/session.ts` (a `requireAdmin()` helper —
+  defined but not actually called anywhere yet), session types, a
+  `SessionProvider` wrapper, and real `signIn()` wiring on the Login page
+- Also fixed a real, separate bug: an invisible "Explore Menu" button
+  caused by `clsx()` not resolving conflicting Tailwind classes — fixed by
+  switching to `tailwind-merge`
 
----
+So there were two divergent branches: **mine** (more complete — orders,
+settings, all the async-loading bug fixes, the `categoryId` nullable
+schema fix) and **v2** (real auth, but missing orders/settings entirely,
+and missing my Phase 2 bug fixes).
 
-## What Phase 2 actually did
-
-Rewrote the app from "mock data in React Context + localStorage" to "real
-data in Postgres via Prisma, accessed through Next.js API routes."
-
-### New files
-- `lib/serializers.ts` — converts between Prisma's UPPERCASE enums
-  (`OrderStatus.PLACED`) and the frontend's lowercase string types
-  (`"placed"`) that the UI was already built around. This is the
-  translation layer at the API boundary.
-- `lib/validation.ts` — Zod schemas validating every API route's request
-  body.
-- `lib/api-helpers.ts` — `withErrorHandling()` wrapper + `apiError()` /
-  `apiValidationError()` helpers used by every route for consistent error
-  responses.
-- `app/api/categories/route.ts` + `[id]/route.ts` — full CRUD
-- `app/api/foods/route.ts` + `[id]/route.ts` — full CRUD
-- `app/api/orders/route.ts` + `[id]/route.ts` — list/create, get/update-status
-- `app/api/settings/route.ts` — get/update the single restaurant settings row
-
-### Rewritten files
-- `context/CatalogContext.tsx` — now fetches from `/api/foods` +
-  `/api/categories` on mount instead of reading localStorage. All CRUD
-  functions (`addFood`, `updateFood`, etc.) are now `async` and hit the
-  API. Exposes `isLoading` and `error`.
-- `context/OrderContext.tsx` — same pattern for orders. Also added
-  `fetchOrder(id)` — fetches a single order directly (used by pages
-  reached via a fresh URL load, not just in-app navigation).
-- `app/(customer)/checkout/page.tsx` — `placeOrder()` is now awaited;
-  added a `submitError` state shown inline if the order fails to save.
-  Also now guards on `catalogLoading` before showing the "cart empty"
-  state (see "Bugs I found and fixed" below).
-- `app/(customer)/cart/page.tsx` — same `catalogLoading` guard fix.
-- `app/(customer)/order-confirmation/[id]/page.tsx` — rewritten to use
-  `fetchOrder()` with a proper three-state loading pattern
-  (`undefined` = loading, `null` = not found, `Order` = loaded) instead of
-  a synchronous lookup that would have 404'd incorrectly during loading.
-- `app/(customer)/track-order/[id]/page.tsx` — same pattern, **plus**
-  polls `/api/orders/[id]` every 8 seconds, so an admin's status update
-  shows up on the customer's tracking page without a manual refresh. This
-  matters now that admin and customer could be on different
-  devices/browsers (with the old localStorage version, they were
-  necessarily in the same browser, so this wasn't needed).
-- `app/(customer)/my-orders/page.tsx` — uses the real `isLoading` from
-  `OrderContext` instead of a fake `setTimeout`.
-- `app/(customer)/menu/[id]/page.tsx` (food details) — added an
-  `isLoading` guard before `notFound()` fires, same reasoning as above.
-- `components/customer/MenuBrowser.tsx` — added a skeleton grid while
-  `isLoading`, instead of briefly showing "0 dishes found."
-- `components/customer/FoodCard.tsx` — category name lookup switched from
-  the static `data/categories.ts` import to live `useCatalog()` data.
-- `app/(customer)/page.tsx` (homepage) — rewritten as an async Server
-  Component that queries Prisma **directly** (not through the API routes —
-  that's the correct/faster pattern for a Next.js Server Component).
-  Shows a helpful empty-state message if no categories/popular foods exist
-  yet instead of just rendering nothing.
-- `app/admin/foods/page.tsx`, `app/admin/categories/page.tsx`,
-  `app/admin/orders/page.tsx`, `app/admin/page.tsx` (dashboard),
-  `app/admin/payments/page.tsx` — all updated with `isLoading` skeletons,
-  `error` banners, and `async`/`try-catch` handlers around every mutation
-  (add/edit/delete/toggle/status-change), each showing a toast on success
-  *or* failure.
-- `components/admin/FoodFormModal.tsx` + `CategoryFormModal.tsx` — the
-  `onSubmit` prop is now `Promise<void>`. The modal awaits it, shows a
-  "Saving…" state, keeps the modal open with an inline error if the save
-  fails (previously it optimistically closed immediately).
-- `app/admin/settings/page.tsx` — now fetches from `GET /api/settings` on
-  mount and saves via `PATCH /api/settings`, instead of pure local state.
-
-### Schema change (⚠️ requires action — see below)
-`prisma/schema.prisma`: `Food.categoryId` changed from required to
-optional (`String?`), with `onDelete: SetNull` on the relation. This fixes
-a real bug the old schema had: deleting a category that still had foods
-assigned to it would have failed with a foreign-key constraint error at
-the database level, contradicting what the admin UI already promised
-("foods will remain but lose their category label"). `lib/serializers.ts`
-was updated to coalesce a null `categoryId` to `""` for the frontend.
+**This session merged them**, using my codebase as the base (since it was
+strictly more complete on the data layer) and porting v2's authentication
+work into it — plus finishing what v2 had left incomplete (auth existed,
+but nothing actually *enforced* it yet).
 
 ---
 
-## Bugs I found and fixed while building this (worth knowing about)
+## What this merge session actually did
 
-1. **The FK constraint issue above** — schema fix, described above.
-2. **Cart/checkout "empty" flash**: `CartContext`'s resolved `items` depend
-   on `CatalogContext.foods` (to turn `{foodId, quantity}` into a full
-   `CartLine`). Since foods now load asynchronously instead of being
-   available instantly, there was a real bug where `/cart` and `/checkout`
-   would briefly render "your cart is empty" on a fresh page load — even
-   with real items in localStorage — because the catalog hadn't finished
-   fetching yet. Fixed by having both pages also check
-   `useCatalog().isLoading` before deciding whether to show the empty
-   state.
-3. **Order pages 404-on-load bug**: same root cause — `order-confirmation`
-   and `track-order` used to do a synchronous `getOrder(id)` lookup and
-   call `notFound()` immediately if not found. Since orders now load
-   async, a fresh page load would have 404'd valid orders. Fixed with the
-   three-state loading pattern described above.
+### Ported from v2 into the main codebase
+- `lib/auth.ts` — NextAuth config, Credentials provider, JWT session
+  strategy, role embedded in the token/session
+- `lib/session.ts` — `requireAdmin()` helper (session + role check,
+  returns a ready-to-return 401/403 `NextResponse` or the session)
+- `types/next-auth.d.ts` — type augmentation so `session.user.id` and
+  `session.user.role` are properly typed everywhere
+- `components/providers/AuthSessionProvider.tsx` — thin wrapper around
+  NextAuth's `SessionProvider`
+- `app/api/auth/[...nextauth]/route.ts` — the NextAuth route handler
+- Real Login page (calls `signIn("credentials", …)`)
+- `tailwind-merge` dependency + the `cn()` utility fix + a new `slugify()`
+  helper in `lib/utils.ts`
+
+(Note: files copied from v2 had Windows CRLF line endings — normalized to
+LF during the copy.)
+
+### Built fresh, to actually close the security gaps
+- **`app/api/register/route.ts`** — v2 had no registration endpoint at
+  all; the Register page was still mock-only. Built this from scratch:
+  validates input, checks for an existing email, hashes the password,
+  creates a `CUSTOMER`-role user. Register page now calls it, then signs
+  the new user in immediately.
+- **`middleware.ts`** — v2 had no route-level protection for `/admin/*`
+  at all (despite `requireAdmin()` existing, nothing called it). Built
+  using `next-auth/middleware`'s `withAuth()` — redirects to `/login` if
+  no session, redirects to `/` if logged in but not an `ADMIN`.
+- **Added `requireAdmin()` calls to every mutating API route** — this is
+  the big one. Before this session, every `POST`/`PATCH`/`DELETE` route
+  across both branches had a comment saying "⚠️ not yet protected." Now
+  they all actually call `requireAdmin()` first:
+  - `app/api/categories/route.ts` (POST)
+  - `app/api/categories/[id]/route.ts` (PATCH, DELETE)
+  - `app/api/foods/route.ts` (POST)
+  - `app/api/foods/[id]/route.ts` (PATCH, DELETE)
+  - `app/api/orders/[id]/route.ts` (PATCH)
+  - `app/api/settings/route.ts` (PATCH)
+- **`GET /api/orders` now requires an ADMIN session.** Added a separate
+  `GET /api/orders?mine=true` path that requires *any* logged-in session
+  and returns only that user's own orders (via `Order.userId`).
+- **`POST /api/orders`** now reads the session server-side (via
+  `getServerSession`) and links the order to the logged-in user if there
+  is one — never trusts a client-supplied user id. Still works for guests
+  with no account (deliberately — see "Known gaps" below).
+- **Navbar and AdminHeader are now session-aware** — real logged-in
+  name, a logout button, an "Admin" link (only shown to admins) instead
+  of a static "Login" link / hardcoded "Restaurant Admin" text.
+
+### A real integration bug I found and fixed mid-merge
+`OrderContext` (from my earlier Phase 2 work) auto-fetched **all** orders
+on mount, for every page in the app — because `OrderProvider` wraps the
+entire app at the root layout, including the public storefront. Once
+`GET /api/orders` started requiring an admin session, this meant **every
+anonymous visitor to the homepage would trigger a failing 401 request**
+in the background.
+
+Fixed by removing the automatic fetch entirely. `OrderContext` now
+exposes `loadAll()` (admin — fetches everything) and `loadMine()`
+(customer — fetches only their own orders) as functions the *consuming
+page* calls explicitly in its own `useEffect`:
+- `app/admin/page.tsx`, `app/admin/orders/page.tsx`,
+  `app/admin/payments/page.tsx` → call `loadAll()` on mount
+- `app/(customer)/my-orders/page.tsx` → calls `loadMine()` on mount, and
+  now requires login (shows a "Log in to see your orders" prompt via
+  `useSession()` if not authenticated, instead of an empty list)
+- Checkout, order-confirmation, track-order were already fine — they
+  don't depend on the bulk list (`placeOrder` and `fetchOrder` are
+  independent, targeted requests)
 
 ---
 
 ## ⚠️ Action required before this can be tested
 
-**1. Push the schema change to the database:**
+**1. Install the new dependencies:**
 ```bash
-npm run db:push
+npm install
 ```
-This is a real, if minor, schema migration (`Food.categoryId` nullable).
-Supabase's Table Editor should show the column now allows NULL after this
-runs.
+(New: `next-auth`, `@next-auth/prisma-adapter`, `bcryptjs`, `tailwind-merge`
+— some may already be present from earlier `package.json` edits, but
+`npm install` will reconcile everything against `package-lock.json`.)
 
-**2. Run it locally and actually click through it:**
+**2. Confirm your `.env.local` / `.env` already have these** (they should,
+from Phase 1 setup — nothing new needed here since middleware/NextAuth
+reuse `NEXTAUTH_SECRET` and `NEXTAUTH_URL`):
+```
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=http://localhost:3000
+```
+
+**3. Run it locally:**
 ```bash
 npm run dev
 ```
-Test in this order:
-- Visit `/menu` — foods and category tabs should load (from Postgres, via
-  the API route, not instantly from a static import — there should be a
-  brief loading skeleton first).
-- Visit `/admin/foods` — try adding a food, editing one, deleting one,
-  toggling availability. Refresh the page after each — changes should
-  persist (this is the actual point of Phase 2).
-- Visit `/admin/categories` — same CRUD test.
-- Place a full order through checkout as a customer, confirm it redirects
-  to `/order-confirmation/[id]` and shows real data.
-- Visit `/track-order/[id]` for that order.
-- In `/admin/orders`, change that order's status. Go back to the tracking
-  page (or open it in a different browser) — within ~8 seconds it should
-  update automatically (this is the new polling behavior).
-- Visit `/admin/settings`, change something, save, refresh — confirm it
-  persisted.
 
-**3. Report back exactly what happens** — especially any red error text
-in the browser console or the terminal running `npm run dev`. Since none
-of this has been executed yet, there's a real chance of a small bug (a
-typo, a subtly wrong Prisma query, a type mismatch TypeScript didn't
-catch) — that's expected and normal for a first test pass, not a sign
-anything is fundamentally wrong.
+**4. Test in this order:**
+- Visit `/admin` **while logged out** → should redirect to `/login`
+  (this proves `middleware.ts` works)
+- Go to `/register`, create a real account → should auto-log-in and
+  redirect home; Navbar should now show your name instead of "Login"
+- Log out (Navbar → logout icon), then log back in via `/login` with
+  the same credentials → should work
+- Log in as the seeded admin:
+  ```
+  email:    admin@dineflow.example
+  password: ChangeMe123!
+  ```
+  → should reach `/admin` successfully, and the header should show
+  "Admin" (or whatever name is on that seeded user) instead of "Restaurant
+  Admin"
+- **As the admin**, add/edit/delete a food and a category — confirm these
+  still work now that the routes require `requireAdmin()`
+- **Log out**, then try calling one of the admin API routes directly
+  (e.g. open browser dev tools → Network, or just try
+  `fetch('/api/foods', {method:'POST', ...})` from the console) → should
+  get a 401, proving the API-level protection works independently of the
+  page-level middleware
+- As a **logged-in customer** (not admin), place an order, then visit
+  `/my-orders` → the order should appear
+- **Log out and place an order as a guest** (no account) → checkout
+  should still work (this is intentional), and the confirmation/tracking
+  links should still work even though there's no "My Orders" entry for it
 
-**4. Only after local testing passes**, push to GitHub and let Vercel
-redeploy:
+**5. Report back exactly what happens**, especially any red console
+errors. This merge touched a lot of interconnected files and has not been
+run yet — a small bug on first test is normal, not alarming.
+
+**6. Once local testing passes**, push to GitHub and change the seeded
+admin password before this goes anywhere near real users:
 ```bash
 git add .
-git commit -m "Phase 2: connect app to real database"
+git commit -m "Phase 3: real authentication, merged with Phase 2 orders/settings work"
 git push
 ```
 
 ---
 
-## Known gaps / things deliberately left unfinished
+## Known gaps / deliberately left unfinished
 
-- **No authentication yet.** Every API route that writes data (`POST`,
-  `PATCH`, `DELETE` on foods/categories/orders/settings) has a comment
-  starting with `⚠️ Not yet protected by authentication`. Right now,
-  anyone who finds these endpoints (e.g. via browser dev tools) could call
-  them directly. This is expected and tracked — it's exactly what Phase 3
-  fixes. Don't treat this as a Phase 2 bug.
-- **`GET /api/orders` returns every order with no filtering.** Same
-  reasoning — needs to be scoped to the logged-in customer once auth
-  exists. Also tracked as a Phase 3/8 item in `TODO.md`.
-- **Admin can't mark a food as "Popular" or "Featured" from the UI.**
-  `FoodFormModal` never exposed these two fields (this predates Phase 2 —
-  it was also missing in the original mock-data version). The homepage's
-  "Popular Dishes" section reads `isPopular: true` foods, so right now
-  only the originally-seeded foods will ever show there until this is
-  fixed. Not blocking, but worth doing soon — probably a quick addition of
-  two checkboxes to `FoodFormModal`.
-- **The admin dashboard's 7-day revenue/order charts still use the static
-  mock series from `data/analytics.ts`**, not real order history — there
-  isn't yet enough real order history to make a real chart meaningful.
-  The stat *cards* above the chart (Today's Revenue, Today's Orders,
-  Pending, Completed) DO use real data. A proper "real analytics query"
-  is a good future enhancement once the site has real traffic.
-- **`data/payments.ts`** (`mockTransactions`, `getPaymentSummary`) is no
-  longer imported anywhere — the admin Payments page now derives
-  transactions directly from real orders. The file is harmless to leave
-  as-is, or can be deleted later during cleanup.
+- **Guest checkout orders aren't linked to any account.** This is
+  intentional — requiring login just to order food adds friction most
+  restaurant sites avoid. A guest can still track their one order via the
+  direct confirmation/tracking link, but won't see it in an order
+  *history* unless they register. A good future polish item: a banner on
+  the confirmation page suggesting guests create an account.
+- **Order-lookup-by-number is somewhat guessable.** `GET /api/orders/[id]`
+  is deliberately open (no login required) so guests can view their own
+  order — but the order *number* is just a random 5-digit code. Documented
+  in the route file itself as a Phase 8 hardening item (e.g. require the
+  customer's email as a second factor when looking up by number,
+  specifically — not needed for the internal cuid id, which is
+  effectively unguessable).
+- **No password reset flow.** The Login page still has a non-functional
+  "Forgot password?" button. Not scoped into Phase 3 — would need an email
+  provider (Phase 6 territory) to send reset links.
+- **Admin still can't mark a food as "Popular"/"Featured" from the UI** —
+  this gap predates both branches and wasn't touched in this merge.
+- **The seeded admin password (`ChangeMe123!`) is still the seeded admin
+  password.** Change it for real before any real user touches this site.
+- **`supabase/` CLI folder and `.git` history from the v2 upload were not
+  merged** — only the application code was ported. If the user wants
+  Supabase CLI tooling (local Supabase dev environment, migrations via
+  the Supabase CLI rather than Prisma) that's a separate, deliberate
+  decision to make later, not something silently carried over.
 
 ---
 
 ## If you're a new Claude session picking this up
 
-1. Read `TODO.md` for the full roadmap and what phase to work on next.
-2. Read this file (`progress.md`) for the detailed "what actually happened
-   in Phase 2" context above.
-3. **Ask the user whether they've run the "Action required" steps above
-   and what happened** — don't assume Phase 2 works. If they hit errors,
-   debug from their exact error message rather than guessing.
-4. Once Phase 2 is confirmed working end-to-end, Phase 3 (authentication)
-   is next. The groundwork is already in place: `package.json` already has
-   `next-auth`, `@next-auth/prisma-adapter`, and `bcryptjs` installed, and
-   `prisma/schema.prisma` already has the `User`/`Account`/`Session`/
-   `VerificationToken` models NextAuth's Prisma adapter expects. Phase 3
-   is mostly about writing `app/api/auth/[...nextauth]/route.ts`, a
-   `middleware.ts` to protect `/admin/*`, and wiring the existing
-   Login/Register UI to actually call it.
-5. The user is a self-described complete beginner developer — continue
-   the pattern already established in this conversation: very explicit,
-   numbered, copy-pasteable step-by-step instructions for anything they
-   need to do outside the code itself (creating accounts, running
-   commands, checking dashboards).
+1. Read `TODO.md` for the full roadmap.
+2. Read this file for the "how we got here" context above.
+3. **Ask the user whether they've run the "Action required" steps and what
+   happened** — don't assume this merge works end-to-end. Debug from their
+   exact error rather than guessing.
+4. If they mention using Claude Code or another tool in parallel again,
+   **ask to see the resulting code/zip before assuming anything about its
+   state** — as this session demonstrates, parallel work can diverge in
+   non-obvious ways (missing routes, unenforced auth helpers, etc.) that
+   only show up on close inspection, not from commit messages alone.
+5. Once Phase 3 is confirmed working end-to-end, Phase 4 (real payments)
+   is next per `TODO.md` — SSLCommerz is the recommended gateway for a
+   Bangladesh-based restaurant, but that requires a merchant account the
+   user needs to register for externally first (can take a few business
+   days), so it's worth raising that lead time early if they want to move
+   toward it.
+6. The user is a self-described complete beginner developer — keep using
+   very explicit, numbered, copy-pasteable instructions for anything they
+   need to do outside the code itself.
+
+---
+
+## Addendum: post-merge polish (same session, before any test feedback)
+
+After the merge above, and **before the user had reported back any test
+results**, I did a full diff of every remaining file between my codebase
+and the v2 upload to make sure nothing else was missed. Findings:
+
+- `README.md`, `.eslintrc.json`, `tsconfig.json`, `prisma/seed.ts`,
+  `.env.example`, `components/admin/Sidebar.tsx`, `tailwind.config.ts` —
+  all identical between the two branches, nothing to merge.
+- `app/admin/foods/page.tsx` — v2's version was actually *behind* mine
+  (no loading skeletons, no per-row toggle-loading state, and its
+  `FoodFormModal` doesn't await the save the way mine does). Confirmed my
+  version should stay as-is; no changes pulled from v2 here.
+- `next.config.js` — v2 had changed the image `remotePatterns` from a
+  fixed Unsplash-only list to a hostname wildcard (`**`). This is a real
+  fix for a real usability gap (the admin Food/Category forms accept any
+  pasted image URL, but Next's image optimizer rejects any domain not
+  explicitly whitelisted) — ported this over, with a comment explaining
+  it's an intentional, temporary loosening until Phase 5 (real uploads)
+  removes the need for admins to paste arbitrary URLs at all.
+
+Also closed a previously-documented known gap while I had the file open:
+**`FoodFormModal` now has "Show in Popular Dishes" and "Feature on
+homepage" checkboxes** (wired to `isPopular`/`isFeatured`, which the
+`Food` type and database already supported — only the UI was missing).
+This means new foods added via the admin panel can now actually appear in
+the homepage's "Popular Dishes" section, which previously only showed the
+originally-seeded foods.
+
+**None of this addendum work has been tested either** — it's all still
+pending the user's first real test pass through the "Action required"
+checklist above.
+
+---
+
+## Session 3: test results confirmed + live-update fixes (all untested changes below)
+
+**Great news:** the user ran the full Phase 3 test checklist from Session
+2 (admin redirect-when-logged-out, register, admin login + CRUD, customer
+order + My Orders, guest checkout) and **all of it passed.** Phase 3 is
+now confirmed working end-to-end, not just "code complete."
+
+Two real gaps the user found through actual use:
+
+1. **Admin dashboard/orders page didn't show new orders without a manual
+   refresh.** Root cause: `OrderContext.loadAll()` was only ever called
+   once, in each admin page's own mount effect — nothing kept it fresh
+   afterward.
+
+   **Fixed** by moving polling into `app/admin/layout.tsx` (which wraps
+   every `/admin/*` page and — unlike individual page components —
+   does NOT remount when navigating between admin pages, so a single
+   10-second interval there stays alive across the whole admin session).
+   It also now diffs the incoming order list against a `useRef`-tracked
+   set of already-seen order ids and fires a toast ("New order received:
+   DF-XXXXX") for genuinely new ones — carefully built so the *first*
+   load (every order that already existed) never triggers a toast flood,
+   only orders that appear in a *later* poll do.
+
+   Also wired `AdminHeader`'s notification bell to real data — it now
+   lists actual orders needing attention (status placed/confirmed, or a
+   failed payment) instead of three hardcoded fake lines, and the red
+   dot only shows when there's something to see.
+
+   **⚠️ I made and caught a real mistake here worth knowing about:** my
+   first edit to `AdminHeader.tsx` used `str_replace` with an `old_str`
+   that only matched through the *opening* of the notification dropdown
+   section, but the `new_str` I supplied was a complete, self-closing
+   component (including the profile menu and closing tags). The tool
+   applied it correctly, but the result was a file with the profile
+   section and closing tags duplicated — the *original* profile section
+   was still there too, right after. Balance-checked, caught it
+   immediately (brace count was off by one), and fixed by truncating the
+   file back to the single correct copy. **Full file inspected via
+   `view` afterward to confirm it's correct** — but genuinely re-verify
+   this file compiles cleanly as part of your first test pass, since it's
+   the one file this session where a mechanical editing mistake actually
+   happened (even though it was caught and fixed).
+
+2. **No notifications reach the customer when their order status
+   changes**, unless they happen to have the tracking page open (which
+   already polls and updates live — that part already worked). Real
+   "reach them anywhere" notifications need an email provider — this is
+   Phase 6 work, not something fixable with a quick patch. Added detail
+   to `TODO.md` Phase 6 distinguishing what's now done (admin in-app
+   live updates) from what still needs an external service (customer
+   email notifications) — **the user has not yet been asked whether they
+   want to start Phase 6 now**; that's the natural next conversational
+   step once GitHub is sorted out (see below).
+
+### GitHub state — flagged by the user, not yet resolved as of writing this
+
+The user's **GitHub repo currently reflects the old `dineflow_v2.zip`
+state** (pushed by their separate Claude Code session). Their **local
+working directory has the newer merged code** (this session's zip,
+already tested and passing). These have diverged. I was about to write
+careful step-by-step git instructions for reconciling this — accounting
+for the real possibility that a plain `git push` gets rejected as
+non-fast-forward (since GitHub has commits the local repo doesn't), in
+which case the safe resolution for a solo developer who wants their
+tested local state to win is `git push --force` (with the risk of that
+command clearly explained, not just the command itself).
+
+**If you're picking this up and the user hasn't yet pushed:** that's the
+very next thing to help with. Have them run `git status` and
+`git remote -v` first to confirm what they're working with before
+touching anything.
+
+

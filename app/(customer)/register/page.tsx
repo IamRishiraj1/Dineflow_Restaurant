@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChefHat, Info } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { ChefHat } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/ToastContext";
@@ -19,7 +20,7 @@ export default function RegisterPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const next: Record<string, string> = {};
     if (!form.name.trim()) next.name = "Name is required";
@@ -30,10 +31,41 @@ export default function RegisterPage() {
     if (Object.keys(next).length > 0) return;
 
     setIsSubmitting(true);
-    window.setTimeout(() => {
-      showToast("Account created successfully (mock)", "success");
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), password: form.password }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Couldn't create your account. Please try again.");
+      }
+
+      // Registration succeeded — sign the new user in immediately rather
+      // than sending them back to the login form to re-enter what they
+      // just typed.
+      const result = await signIn("credentials", {
+        email: form.email.trim(),
+        password: form.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        showToast("Account created — please log in.", "success");
+        router.push("/login");
+        return;
+      }
+
+      showToast("Account created successfully", "success");
       router.push("/");
-    }, 600);
+      router.refresh();
+    } catch (err) {
+      setErrors({ email: err instanceof Error ? err.message : "Something went wrong. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -82,11 +114,6 @@ export default function RegisterPage() {
         <Button type="submit" fullWidth disabled={isSubmitting}>
           {isSubmitting ? "Creating account…" : "Create Account"}
         </Button>
-
-        <div className="flex items-start gap-2 rounded-xl bg-ink-50 p-3 text-xs text-ink-500">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" />
-          This is a prototype. No real account is created and no data is sent anywhere.
-        </div>
       </form>
 
       <p className="mt-6 text-center text-sm text-ink-500">

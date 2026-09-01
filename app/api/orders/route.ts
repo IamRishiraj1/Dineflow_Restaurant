@@ -1,16 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeOrder, orderTypeToDb, paymentMethodToDb } from "@/lib/serializers";
 import { placeOrderInputSchema } from "@/lib/validation";
-import { withErrorHandling } from "@/lib/api-helpers";
+import { withErrorHandling, apiError } from "@/lib/api-helpers";
+import { requireAdmin } from "@/lib/session";
 import { generateOrderNumber } from "@/lib/utils";
 
-// GET /api/orders — every order, newest first.
-// ⚠️ Returns ALL orders with no per-customer filtering — fine while the
-// admin dashboard is the only consumer, but this MUST be scoped to the
-// logged-in user once Phase 3 (auth) lands, or any customer could see
-// every other customer's order history. See TODO.md Phase 3 + Phase 8.
-export const GET = withErrorHandling(async () => {
+// GET /api/orders            — every order, newest first. Admin-only.
+// GET /api/orders?mine=true  — only the logged-in customer's own orders.
+//                               Requires a session, but not the ADMIN role.
+// This split is what keeps a customer from being able to see every other
+// customer's order history (see TODO.md Phase 3 + Phase 8 — this used to
+// be a wide-open endpoint before auth existed).
+export const GET = withErrorHandling(async (req: NextRequest) => {
+  const mine = req.nextUrl.searchParams.get("mine") === "true";
+
+  if (mine) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return apiError("Not authenticated.", 401);
+    }
+    const orders = await prisma.order.findMany({
+      where: { userId: session.user.id },
+      include: { items: true },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(orders.map(serializeOrder));
+  }
+
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const orders = await prisma.order.findMany({
     include: { items: true },
     orderBy: { createdAt: "desc" },
@@ -18,8 +40,15 @@ export const GET = withErrorHandling(async () => {
   return NextResponse.json(orders.map(serializeOrder));
 });
 
-// POST /api/orders — place a new order from checkout.
+// POST /api/orders — place a new order from checkout. Deliberately left
+// open to guests (no login required) — forcing an account just to order
+// food is exactly the kind of friction this project's checkout was built
+// to avoid. If the customer IS logged in, the order is linked to their
+// account (via the session, never a client-supplied id) so it shows up in
+// their "My Orders" page automatically.
 export const POST = withErrorHandling(async (req: NextRequest) => {
+  const session = await getServerSession(authOptions);
+
   const body = await req.json();
   const input = placeOrderInputSchema.parse(body);
 
@@ -38,6 +67,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       order = await prisma.order.create({
         data: {
           orderNumber,
+          userId: session?.user?.id ?? null,
           fullName: input.customer.fullName,
           email: input.customer.email,
           phone: input.customer.phone,

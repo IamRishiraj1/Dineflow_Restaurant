@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FoodFormModal } from "@/components/admin/FoodFormModal";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCurrency } from "@/lib/utils";
 
 export default function AdminFoodsPage() {
@@ -21,6 +22,7 @@ export default function AdminFoodsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<Food | null>(null);
   const [deletingFood, setDeletingFood] = useState<Food | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   function openAddForm() {
     setEditingFood(null);
@@ -32,40 +34,34 @@ export default function AdminFoodsPage() {
     setIsFormOpen(true);
   }
 
-  // Now async: waits for the API call to actually succeed before showing a
-  // success toast, and shows an error toast (instead of a false "success")
-  // if the request fails. The form modal isn't awaiting this, so it still
-  // closes immediately the way it always did — only the toast timing changed.
   async function handleSubmit(data: Omit<Food, "id" | "rating" | "reviewCount">) {
-    try {
-      if (editingFood) {
-        await updateFood(editingFood.id, data);
-        showToast(`${data.name} updated`, "success");
-      } else {
-        await addFood(data);
-        showToast(`${data.name} added to the menu`, "success");
-      }
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Something went wrong. Please try again.", "error");
+    if (editingFood) {
+      await updateFood(editingFood.id, data);
+      showToast(`${data.name} updated`, "success");
+    } else {
+      await addFood(data);
+      showToast(`${data.name} added to the menu`, "success");
     }
   }
 
   async function handleToggleAvailability(food: Food) {
+    setTogglingId(food.id);
     try {
       await toggleFoodAvailability(food.id);
       showToast(`${food.name} marked as ${food.isAvailable ? "unavailable" : "available"}`, "info");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to update availability.", "error");
+      showToast(err instanceof Error ? err.message : "Couldn't update availability", "error");
+    } finally {
+      setTogglingId(null);
     }
   }
 
-  async function handleDeleteConfirm() {
-    if (!deletingFood) return;
+  async function handleDelete(food: Food) {
     try {
-      await deleteFood(deletingFood.id);
-      showToast(`${deletingFood.name} removed from the menu`, "info");
+      await deleteFood(food.id);
+      showToast(`${food.name} removed from the menu`, "info");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to delete food.", "error");
+      showToast(err instanceof Error ? err.message : "Couldn't delete this food", "error");
     }
   }
 
@@ -76,23 +72,25 @@ export default function AdminFoodsPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-500">
-          {isLoading ? "Loading menu…" : `${foods.length} items on the menu`}
-        </p>
+        <p className="text-sm text-ink-500">{isLoading ? "Loading…" : `${foods.length} items on the menu`}</p>
         <Button onClick={openAddForm}>
           <Plus className="h-4 w-4" /> Add New Food
         </Button>
       </div>
 
       {error && (
-        <div className="mt-4 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600">
-          Couldn&apos;t load the menu: {error}
-        </div>
+        <p role="alert" className="mt-4 rounded-xl bg-error-50 px-4 py-3 text-sm text-error-600">
+          {error}
+        </p>
       )}
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-card">
         {isLoading ? (
-          <div className="p-6 text-center text-sm text-ink-500">Loading foods…</div>
+          <div className="space-y-3 p-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
+          </div>
         ) : foods.length === 0 ? (
           <div className="p-6">
             <EmptyState
@@ -131,10 +129,11 @@ export default function AdminFoodsPage() {
                     <td className="py-3 pr-4">
                       <button
                         onClick={() => handleToggleAvailability(food)}
+                        disabled={togglingId === food.id}
                         role="switch"
                         aria-checked={food.isAvailable}
                         aria-label={`Toggle availability for ${food.name}`}
-                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
                           food.isAvailable ? "bg-success-500" : "bg-ink-200"
                         }`}
                       >
@@ -187,7 +186,9 @@ export default function AdminFoodsPage() {
       <ConfirmDialog
         isOpen={!!deletingFood}
         onClose={() => setDeletingFood(null)}
-        onConfirm={handleDeleteConfirm}
+        onConfirm={() => {
+          if (deletingFood) handleDelete(deletingFood);
+        }}
         title="Delete food item"
         description={`Are you sure you want to delete "${deletingFood?.name}"? This can't be undone.`}
       />

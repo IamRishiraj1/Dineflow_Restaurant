@@ -11,61 +11,65 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CategoryFormModal } from "@/components/admin/CategoryFormModal";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function AdminCategoriesPage() {
-  const { categories, foods, isLoading, error, addCategory, updateCategory, deleteCategory, toggleCategoryActive } =
-    useCatalog();
+  const {
+    categories,
+    foods,
+    isLoading,
+    error,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    toggleCategoryActive,
+  } = useCatalog();
   const { showToast } = useToast();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   function foodCount(categoryId: string) {
     return foods.filter((f) => f.categoryId === categoryId).length;
   }
 
   async function handleSubmit(data: Omit<Category, "id">) {
-    try {
-      if (editingCategory) {
-        await updateCategory(editingCategory.id, data);
-        showToast(`${data.name} updated`, "success");
-      } else {
-        await addCategory(data);
-        showToast(`${data.name} added`, "success");
-      }
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Something went wrong. Please try again.", "error");
+    if (editingCategory) {
+      await updateCategory(editingCategory.id, data);
+      showToast(`${data.name} updated`, "success");
+    } else {
+      await addCategory(data);
+      showToast(`${data.name} added`, "success");
     }
   }
 
   async function handleToggleActive(category: Category) {
+    setTogglingId(category.id);
     try {
       await toggleCategoryActive(category.id);
+      showToast(`${category.name} is now ${category.isActive ? "hidden" : "visible"}`, "info");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to update category.", "error");
+      showToast(err instanceof Error ? err.message : "Couldn't update visibility", "error");
+    } finally {
+      setTogglingId(null);
     }
   }
 
-  async function handleDeleteConfirm() {
-    if (!deletingCategory) return;
+  async function handleDelete(category: Category) {
     try {
-      await deleteCategory(deletingCategory.id);
-      showToast(`${deletingCategory.name} deleted`, "info");
+      await deleteCategory(category.id);
+      showToast(`${category.name} deleted`, "info");
     } catch (err) {
-      // The API blocks deleting a category that still has foods in it
-      // (see app/api/categories/[id]/route.ts) and returns a clear message —
-      // surface that instead of a generic failure.
-      showToast(err instanceof Error ? err.message : "Failed to delete category.", "error");
+      showToast(err instanceof Error ? err.message : "Couldn't delete this category", "error");
     }
   }
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-500">
-          {isLoading ? "Loading categories…" : `${categories.length} categories`}
-        </p>
+        <p className="text-sm text-ink-500">{isLoading ? "Loading…" : `${categories.length} categories`}</p>
         <Button
           onClick={() => {
             setEditingCategory(null);
@@ -77,14 +81,16 @@ export default function AdminCategoriesPage() {
       </div>
 
       {error && (
-        <div className="mt-4 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600">
-          Couldn&apos;t load categories: {error}
-        </div>
+        <p role="alert" className="mt-4 rounded-xl bg-error-50 px-4 py-3 text-sm text-error-600">
+          {error}
+        </p>
       )}
 
       {isLoading ? (
-        <div className="mt-5 rounded-2xl border border-ink-100 bg-white p-6 text-center text-sm text-ink-500 shadow-card">
-          Loading categories…
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-56 w-full rounded-2xl" />
+          ))}
         </div>
       ) : categories.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-ink-100 bg-white p-6 shadow-card">
@@ -110,10 +116,11 @@ export default function AdminCategoriesPage() {
                 <div className="mt-4 flex items-center justify-between">
                   <button
                     onClick={() => handleToggleActive(category)}
+                    disabled={togglingId === category.id}
                     role="switch"
                     aria-checked={category.isActive}
                     aria-label={`Toggle visibility for ${category.name}`}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
                       category.isActive ? "bg-success-500" : "bg-ink-200"
                     }`}
                   >
@@ -159,7 +166,9 @@ export default function AdminCategoriesPage() {
       <ConfirmDialog
         isOpen={!!deletingCategory}
         onClose={() => setDeletingCategory(null)}
-        onConfirm={handleDeleteConfirm}
+        onConfirm={() => {
+          if (deletingCategory) handleDelete(deletingCategory);
+        }}
         title="Delete category"
         description={`Are you sure you want to delete "${deletingCategory?.name}"? Foods in this category will remain but lose their category label.`}
       />

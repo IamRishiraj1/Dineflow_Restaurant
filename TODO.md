@@ -28,24 +28,30 @@ step needs me to write code, say "let's do step X" and I'll build it.
 - [ ] Test: add a food in `/admin/foods`, refresh the page, confirm it's still there
 - [ ] Test: open the site in two different browsers/devices, confirm both see the same live menu
 - [ ] Push to GitHub + let Vercel redeploy
-- [ ] Known gap: admin can't yet toggle a food's "Popular"/"Featured" flags from the UI — see `progress.md`
+- [x] Known gap resolved: admin can now toggle a food's "Popular"/"Featured" flags from the UI (added to `FoodFormModal`)
 
 ---
 
-## PHASE 3 — Real authentication
+## PHASE 3 — Real authentication ✅ CODE COMPLETE
 
 *Goal: `/admin` is locked behind a real login; customers can create real accounts.*
 
-- [ ] Install and configure NextAuth.js (`next-auth`, `@next-auth/prisma-adapter` — already in `package.json`)
-- [ ] Create `app/api/auth/[...nextauth]/route.ts` with a Credentials provider (email + password)
-- [ ] Wire the existing Login/Register UI to actually call NextAuth's `signIn()` / a real registration API route
-- [ ] Hash passwords with bcrypt on registration (bcryptjs is already installed)
-- [ ] Add middleware (`middleware.ts`) that redirects unauthenticated users away from `/admin/*`
-- [ ] Add a role check so only `ADMIN` users (not regular customers) can reach `/admin/*`
-- [ ] Change the seeded admin password (`ChangeMe123!`) to something real and private
-- [ ] Wire "My Orders" to show only the logged-in customer's own orders
+- [x] Install and configure NextAuth.js (Credentials provider + Prisma-backed user lookup)
+- [x] Create `app/api/auth/[...nextauth]/route.ts`
+- [x] Wire the existing Login/Register UI to actually call NextAuth's `signIn()` / a real `/api/register` route
+- [x] Hash passwords with bcrypt on registration
+- [x] Add `middleware.ts` that redirects unauthenticated users away from `/admin/*`
+- [x] Add a role check so only `ADMIN` users (not regular customers) can reach `/admin/*`
+- [x] Every mutating API route (foods/categories/orders/settings POST/PATCH/DELETE) now calls `requireAdmin()` server-side — the "⚠️ not yet protected" warnings from Phase 2 are resolved
+- [x] `GET /api/orders` now requires ADMIN; added `GET /api/orders?mine=true` (requires any login) for customer order history
+- [x] Wire "My Orders" to show only the logged-in customer's own orders — page now requires login
+- [x] Navbar shows real logged-in state (name + logout + admin link) instead of a static "Login" link
+- [ ] **YOU NEED TO DO THIS:** run `npm install` (new dependencies: `next-auth`, `@next-auth/prisma-adapter`, `bcryptjs`, `tailwind-merge`)
+- [ ] **YOU NEED TO DO THIS:** change the seeded admin password (`ChangeMe123!`) — see `progress.md`
 - [ ] Test: log out, try visiting `/admin` directly — confirm you're redirected to login
 - [ ] Test: register a new customer account, place an order, confirm it appears in "My Orders"
+- [ ] Test: log in as the seeded admin, confirm `/admin` loads and all CRUD actions still work
+- [ ] Known gap: guest checkout orders (no account) aren't linked to any user — this is intentional (forcing login to order adds friction), but means a guest can only track that one order via its direct link, not see order history. Worth a banner nudging guests to create an account after checkout, as a future polish item.
 
 ---
 
@@ -81,11 +87,13 @@ step needs me to write code, say "let's do step X" and I'll build it.
 
 *Goal: customers and the restaurant get notified automatically, not just via on-screen UI.*
 
+- [x] **Admin-side in-app live updates** — done ahead of schedule. `app/admin/layout.tsx` now polls every 10 seconds and toasts "New order received" the moment one comes in, from anywhere in the admin dashboard. `AdminHeader`'s notification bell shows real orders that need attention (placed/confirmed/payment-failed) instead of hardcoded mock text. This covers "the restaurant gets notified" for anyone who has the dashboard open — it does NOT cover being notified while away from the screen (that needs email/push, below).
 - [ ] Choose an email provider (Resend is simple and has a generous free tier)
 - [ ] Send an order confirmation email to the customer when they place an order
-- [ ] Send a "your order is ready" email when status changes to Ready
-- [ ] Send a new-order alert email to the restaurant's inbox when an order comes in
+- [ ] Send a "your order is ready" / status-change email to the customer (the customer's tracking page at `/track-order/[id]` already polls every 8 seconds and updates live if they have it open — this item is about reaching them when they DON'T have it open)
+- [ ] Send a new-order alert email to the restaurant's inbox when an order comes in (for when no one's watching the dashboard)
 - [ ] (Optional) Add SMS notifications via a provider like Twilio for delivery updates
+- [ ] (Optional, no external service needed) Browser push notifications via the Web Notifications API for customers who keep the tracking tab open in the background — smaller lift than email, but only works while that tab is open in that browser, so it complements rather than replaces email
 
 ---
 

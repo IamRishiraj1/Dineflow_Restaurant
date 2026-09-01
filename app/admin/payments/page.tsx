@@ -1,37 +1,54 @@
 "use client";
 
+import { useEffect } from "react";
 import { Wallet, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { StatCard } from "@/components/admin/StatCard";
 import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useOrders } from "@/context/OrderContext";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { mockTransactions } from "@/data/payments";
 
+// Transactions are derived directly from real orders — every order that
+// exists has exactly one associated "transaction" in this simplified
+// model. See TODO.md Phase 4 for wiring in a real payment gateway, which
+// will introduce a genuine separate Transaction record (gateway reference
+// IDs, retries, refunds, etc.) instead of this 1:1 mapping.
 export default function AdminPaymentsPage() {
-  // Recompute the summary against the live order list (mock orders + any
-  // placed during this session) rather than the static payments file, so
-  // the numbers stay in sync with Orders/Dashboard.
-  const { orders } = useOrders();
+  const { orders, isLoading, loadAll } = useOrders();
+
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const paidOrders = orders.filter((o) => o.paymentStatus === "paid");
   const pendingOrders = orders.filter((o) => o.paymentStatus === "pending");
   const failedOrders = orders.filter((o) => o.paymentStatus === "failed");
   const totalRevenue = paidOrders.reduce((sum, o) => sum + o.total, 0);
 
-  const transactions =
-    orders.length > mockTransactions.length
-      ? orders
-          .slice()
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .map((o) => ({
-            id: `txn-${o.id}`,
-            orderId: o.orderNumber,
-            amount: o.total,
-            method: o.paymentMethod,
-            status: o.paymentStatus,
-            date: o.createdAt,
-          }))
-      : mockTransactions;
+  const transactions = [...orders]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map((o) => ({
+      id: `txn-${o.id.slice(0, 10)}`,
+      orderId: o.orderNumber,
+      amount: o.total,
+      method: o.paymentMethod,
+      status: o.paymentStatus,
+      date: o.createdAt,
+    }));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-80 w-full rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -45,7 +62,9 @@ export default function AdminPaymentsPage() {
       <div className="mt-6 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-card">
         <div className="border-b border-ink-100 p-5">
           <h2 className="font-display text-base font-semibold text-ink-900">Transactions</h2>
-          <p className="mt-1 text-sm text-ink-500">Mock payment records — no real payment gateway is connected.</p>
+          <p className="mt-1 text-sm text-ink-500">
+            Cash-on-delivery orders show as pending until collected. Real gateway payments arrive in Phase 4.
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">

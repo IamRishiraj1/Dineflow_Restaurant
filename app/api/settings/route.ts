@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { serializeSettings } from "@/lib/serializers";
 import { settingsUpdateSchema } from "@/lib/validation";
 import { withErrorHandling, apiError } from "@/lib/api-helpers";
+import { requireAdmin } from "@/lib/session";
 import { defaultRestaurantSettings } from "@/data/restaurant";
 
 const SETTINGS_ID = "singleton";
@@ -21,8 +22,11 @@ export const GET = withErrorHandling(async () => {
 
 // PATCH /api/settings — update restaurant info, opening hours, or
 // preferences. Upserts so this works even before the seed script has run.
-// ⚠️ Not yet protected by authentication — see TODO.md Phase 3.
+// Admin-only.
 export const PATCH = withErrorHandling(async (req: NextRequest) => {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const body = await req.json();
   const input = settingsUpdateSchema.parse(body);
 

@@ -1,22 +1,51 @@
 "use client";
 
+import { useEffect } from "react";
 import { Wallet, ShoppingCart, Clock3, CheckCircle2 } from "lucide-react";
 import { StatCard } from "@/components/admin/StatCard";
 import { RevenueChart } from "@/components/admin/RevenueChart";
 import { OrdersChart } from "@/components/admin/OrdersChart";
 import { PopularFoodsList } from "@/components/admin/PopularFoodsList";
 import { RecentOrdersTable } from "@/components/admin/RecentOrdersTable";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useOrders } from "@/context/OrderContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { last7DaysStats } from "@/data/analytics";
 import { formatCurrency } from "@/lib/utils";
 
-export default function AdminDashboardPage() {
-  const { orders } = useOrders();
-  const { foods } = useCatalog();
+function isToday(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
 
-  const todayRevenue = 42500;
-  const todayOrders = 128;
+export default function AdminDashboardPage() {
+  const { orders, isLoading: ordersLoading, loadAll } = useOrders();
+  const { foods, isLoading: catalogLoading } = useCatalog();
+  const isLoading = ordersLoading || catalogLoading;
+
+  // Safe to fetch every order here — middleware.ts already keeps
+  // non-admins from ever reaching this page, and the API route
+  // double-checks the admin role server-side too.
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Computed from real orders in the database, not the static mock
+  // analytics file — this is genuinely live now that Phase 2 is wired up.
+  // The 7-day trend charts below still use the mock series, since there
+  // isn't yet a week of real order history to chart (see TODO.md — a
+  // proper analytics query is a good next enhancement once real traffic
+  // exists).
+  const todaysOrders = orders.filter((o) => isToday(o.createdAt));
+  const todayRevenue = todaysOrders
+    .filter((o) => o.paymentStatus === "paid")
+    .reduce((sum, o) => sum + o.total, 0);
   const pendingOrders = orders.filter((o) => ["placed", "confirmed", "preparing"].includes(o.status)).length;
   const completedOrders = orders.filter((o) => o.status === "completed").length;
 
@@ -25,11 +54,24 @@ export default function AdminDashboardPage() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-80 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Today's Revenue" value={formatCurrency(todayRevenue)} icon={Wallet} trend={{ value: "12.4%", positive: true }} />
-        <StatCard label="Today's Orders" value={String(todayOrders)} icon={ShoppingCart} trend={{ value: "8.1%", positive: true }} />
+        <StatCard label="Today's Revenue" value={formatCurrency(todayRevenue)} icon={Wallet} />
+        <StatCard label="Today's Orders" value={String(todaysOrders.length)} icon={ShoppingCart} />
         <StatCard label="Pending Orders" value={String(pendingOrders)} icon={Clock3} />
         <StatCard label="Completed Orders" value={String(completedOrders)} icon={CheckCircle2} />
       </div>

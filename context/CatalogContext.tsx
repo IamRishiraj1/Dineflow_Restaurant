@@ -14,47 +14,26 @@ interface CatalogContextValue {
   categories: Category[];
   isLoading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
-  addFood: (input: NewFoodInput) => Promise<Food>;
-  updateFood: (id: string, input: Partial<Food>) => Promise<Food>;
+  addFood: (input: NewFoodInput) => Promise<void>;
+  updateFood: (id: string, input: Partial<Food>) => Promise<void>;
   deleteFood: (id: string) => Promise<void>;
-  toggleFoodAvailability: (id: string) => Promise<Food>;
-  addCategory: (input: NewCategoryInput) => Promise<Category>;
-  updateCategory: (id: string, input: Partial<Category>) => Promise<Category>;
+  toggleFoodAvailability: (id: string) => Promise<void>;
+  addCategory: (input: NewCategoryInput) => Promise<void>;
+  updateCategory: (id: string, input: Partial<Category>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
-  toggleCategoryActive: (id: string) => Promise<Category>;
+  toggleCategoryActive: (id: string) => Promise<void>;
+  refetch: () => Promise<void>;
 }
 
 const CatalogContext = createContext<CatalogContextValue | undefined>(undefined);
 
-// The API returns extra fields (`category`, `createdAt`, `updatedAt`) that
-// aren't part of the Food/Category types in types/index.ts. Rather than
-// widen those shared types for every consumer in the app, the extra fields
-// are just dropped here, at the one place that talks to the API.
-function toFood(apiFood: Food & { category?: unknown; createdAt?: string; updatedAt?: string }): Food {
-  const { category: _category, createdAt: _createdAt, updatedAt: _updatedAt, ...food } = apiFood;
-  return food;
-}
-function toCategory(apiCategory: Category & { createdAt?: string; updatedAt?: string }): Category {
-  const { createdAt: _createdAt, updatedAt: _updatedAt, ...category } = apiCategory;
-  return category;
-}
-
-async function parseJsonOrThrow(res: Response) {
-  let body: unknown = null;
-  try {
-    body = await res.json();
-  } catch {
-    // response had no JSON body — fall through to the generic error below
-  }
+/** Throws a readable error if a fetch to our own API didn't come back ok. */
+async function unwrap<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const message =
-      body && typeof body === "object" && "error" in body
-        ? String((body as { error: unknown }).error)
-        : `Request failed with status ${res.status}`;
-    throw new Error(message);
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed (${res.status})`);
   }
-  return body;
+  return res.json();
 }
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
@@ -63,7 +42,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -72,88 +51,84 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         fetch("/api/categories"),
       ]);
       const [foodsData, categoriesData] = await Promise.all([
-        parseJsonOrThrow(foodsRes),
-        parseJsonOrThrow(categoriesRes),
+        unwrap<Food[]>(foodsRes),
+        unwrap<Category[]>(categoriesRes),
       ]);
-      setFoods((foodsData as Parameters<typeof toFood>[0][]).map(toFood));
-      setCategories((categoriesData as Parameters<typeof toCategory>[0][]).map(toCategory));
+      setFoods(foodsData);
+      setCategories(categoriesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load menu data.");
+      setError(err instanceof Error ? err.message : "Failed to load the menu.");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    loadAll();
+  }, [loadAll]);
 
-  async function addFood(input: NewFoodInput): Promise<Food> {
+  async function addFood(input: NewFoodInput) {
     const res = await fetch("/api/foods", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    const created = toFood(await parseJsonOrThrow(res) as Parameters<typeof toFood>[0]);
+    const created = await unwrap<Food>(res);
     setFoods((prev) => [created, ...prev]);
-    return created;
   }
 
-  async function updateFood(id: string, input: Partial<Food>): Promise<Food> {
+  async function updateFood(id: string, input: Partial<Food>) {
     const res = await fetch(`/api/foods/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    const updated = toFood(await parseJsonOrThrow(res) as Parameters<typeof toFood>[0]);
+    const updated = await unwrap<Food>(res);
     setFoods((prev) => prev.map((f) => (f.id === id ? updated : f)));
-    return updated;
   }
 
-  async function deleteFood(id: string): Promise<void> {
+  async function deleteFood(id: string) {
     const res = await fetch(`/api/foods/${id}`, { method: "DELETE" });
-    await parseJsonOrThrow(res);
+    await unwrap<{ success: boolean }>(res);
     setFoods((prev) => prev.filter((f) => f.id !== id));
   }
 
-  function toggleFoodAvailability(id: string): Promise<Food> {
+  async function toggleFoodAvailability(id: string) {
     const current = foods.find((f) => f.id === id);
-    if (!current) return Promise.reject(new Error("Food not found."));
-    return updateFood(id, { isAvailable: !current.isAvailable });
+    if (!current) return;
+    await updateFood(id, { isAvailable: !current.isAvailable });
   }
 
-  async function addCategory(input: NewCategoryInput): Promise<Category> {
+  async function addCategory(input: NewCategoryInput) {
     const res = await fetch("/api/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    const created = toCategory(await parseJsonOrThrow(res) as Parameters<typeof toCategory>[0]);
+    const created = await unwrap<Category>(res);
     setCategories((prev) => [created, ...prev]);
-    return created;
   }
 
-  async function updateCategory(id: string, input: Partial<Category>): Promise<Category> {
+  async function updateCategory(id: string, input: Partial<Category>) {
     const res = await fetch(`/api/categories/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    const updated = toCategory(await parseJsonOrThrow(res) as Parameters<typeof toCategory>[0]);
+    const updated = await unwrap<Category>(res);
     setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    return updated;
   }
 
-  async function deleteCategory(id: string): Promise<void> {
+  async function deleteCategory(id: string) {
     const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
-    await parseJsonOrThrow(res);
+    await unwrap<{ success: boolean }>(res);
     setCategories((prev) => prev.filter((c) => c.id !== id));
   }
 
-  function toggleCategoryActive(id: string): Promise<Category> {
+  async function toggleCategoryActive(id: string) {
     const current = categories.find((c) => c.id === id);
-    if (!current) return Promise.reject(new Error("Category not found."));
-    return updateCategory(id, { isActive: !current.isActive });
+    if (!current) return;
+    await updateCategory(id, { isActive: !current.isActive });
   }
 
   return (
@@ -163,7 +138,6 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         categories,
         isLoading,
         error,
-        refetch,
         addFood,
         updateFood,
         deleteFood,
@@ -172,6 +146,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         updateCategory,
         deleteCategory,
         toggleCategoryActive,
+        refetch: loadAll,
       }}
     >
       {children}

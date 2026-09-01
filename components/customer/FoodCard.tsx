@@ -9,14 +9,15 @@ import { Rating } from "@/components/ui/Rating";
 import { Badge } from "@/components/ui/Badge";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
+import { useCatalog } from "@/context/CatalogContext";
 import { formatCurrency, cn } from "@/lib/utils";
-import { getCategoryById } from "@/data/categories";
 
 export function FoodCard({ food, className }: { food: Food; className?: string }) {
   const { addToCart } = useCart();
   const { showToast } = useToast();
+  const { categories } = useCatalog();
   const [isFavorite, setIsFavorite] = useState(false);
-  const category = getCategoryById(food.categoryId);
+  const category = categories.find((c) => c.id === food.categoryId);
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();

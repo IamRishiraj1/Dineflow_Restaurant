@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 interface CategoryFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Omit<Category, "id">) => void;
+  onSubmit: (data: Omit<Category, "id">) => Promise<void>;
   initialCategory?: Category | null;
 }
 
@@ -18,6 +18,8 @@ const EMPTY_FORM = { name: "", description: "", image: "", isActive: true };
 export function CategoryFormModal({ isOpen, onClose, onSubmit, initialCategory }: CategoryFormModalProps) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialCategory) {
@@ -31,6 +33,7 @@ export function CategoryFormModal({ isOpen, onClose, onSubmit, initialCategory }
       setForm(EMPTY_FORM);
     }
     setErrors({});
+    setSubmitError(null);
   }, [initialCategory, isOpen]);
 
   function validate(): boolean {
@@ -40,19 +43,27 @@ export function CategoryFormModal({ isOpen, onClose, onSubmit, initialCategory }
     return Object.keys(next).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    onSubmit({
-      name: form.name.trim(),
-      slug: form.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      description: form.description.trim(),
-      image:
-        form.image.trim() ||
-        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80&auto=format&fit=crop",
-      isActive: form.isActive,
-    });
-    onClose();
+    setIsSaving(true);
+    setSubmitError(null);
+    try {
+      await onSubmit({
+        name: form.name.trim(),
+        slug: form.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        description: form.description.trim(),
+        image:
+          form.image.trim() ||
+          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80&auto=format&fit=crop",
+        isActive: form.isActive,
+      });
+      onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -87,12 +98,19 @@ export function CategoryFormModal({ isOpen, onClose, onSubmit, initialCategory }
           />
           Visible to customers
         </label>
+
+        {submitError && (
+          <p role="alert" className="rounded-lg bg-error-50 px-3.5 py-2.5 text-sm text-error-600">
+            {submitError}
+          </p>
+        )}
+
         <div className="flex gap-3 pt-2">
-          <Button type="button" variant="outline" fullWidth onClick={onClose}>
+          <Button type="button" variant="outline" fullWidth onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button type="submit" fullWidth>
-            {initialCategory ? "Save Changes" : "Add Category"}
+          <Button type="submit" fullWidth disabled={isSaving}>
+            {isSaving ? "Saving…" : initialCategory ? "Save Changes" : "Add Category"}
           </Button>
         </div>
       </form>

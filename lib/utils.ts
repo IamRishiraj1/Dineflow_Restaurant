@@ -7,8 +7,10 @@ import { twMerge } from "tailwind-merge";
  * correctly overrides a variant's `text-ink-900`). Plain clsx() only
  * concatenates strings — it does NOT do this, and which class wins ends up
  * depending on Tailwind's generated stylesheet order instead of the order
- * they were passed in, which is what caused the invisible "Explore Menu"
- * button (its override className lost to the outline variant's text color).
+ * they were passed in, which caused an invisible "Explore Menu" button
+ * early on (its override className lost to the outline variant's text
+ * color). Always use this instead of clsx() directly anywhere classes from
+ * a prop might collide with a component's own defaults.
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -58,9 +60,8 @@ export function clamp(value: number, min: number, max: number): number {
 
 /**
  * Turn a name into a URL-safe slug, e.g. "Spicy Chicken!" -> "spicy-chicken".
- * Mirrors the logic already used client-side in CategoryFormModal, so a
- * category created via the API gets the same slug it would have gotten from
- * the admin form.
+ * Used server-side by the Foods/Categories API routes so a record created
+ * via the API gets the same kind of slug the admin form would have made.
  */
 export function slugify(value: string): string {
   return value
