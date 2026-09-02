@@ -6,7 +6,7 @@ export function RestaurantStory() {
       <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-20">
         <div className="relative order-2 aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-card lg:order-1">
           <Image
-            src="https://images.unsplash.com/photo-1760169799369-2b8574466735?w=1000&q=80&auto=format&fit=crop"
+            src="https://images.pexels.com/photos/3938919/pexels-photo-3938919.jpeg?auto=compress&w=1260&h=750&dpr=1"
             alt="Chefs preparing dishes together in the DineFlow kitchen"
             fill
             sizes="(max-width: 1024px) 90vw, 45vw"
