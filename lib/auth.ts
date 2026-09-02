@@ -16,7 +16,12 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+        // Registration normalizes email to lowercase + trimmed before storing
+        // it, so the lookup here must match — otherwise a login typed with
+        // different casing than what was stored finds no user at all.
+        const email = credentials.email.trim().toLowerCase();
+
+        const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.password) return null;
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
