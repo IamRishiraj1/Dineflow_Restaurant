@@ -48,10 +48,10 @@ export default function FoodDetailsPage({ params }: { params: { id: string } }) 
   const related = foods.filter((f) => f.categoryId === food.categoryId && f.id !== food.id).slice(0, 4);
 
   function handleAddToCart() {
-  if (!food || !food.isAvailable) return;
-  addToCart(food.id, quantity);
-  showToast(`${quantity} × ${food.name} added to cart`, "success");
-}
+    if (!food.isAvailable) return;
+    addToCart(food.id, quantity);
+    showToast(`${quantity} × ${food.name} added to cart`, "success");
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">

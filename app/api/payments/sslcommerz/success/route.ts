@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateSSLCommerzPayment } from "@/lib/sslcommerz";
+import { serializeOrder } from "@/lib/serializers";
+import { sendOrderConfirmationEmail, sendNewOrderAlertEmail } from "@/lib/email";
+import { defaultRestaurantSettings } from "@/data/restaurant";
 
 // POST /api/payments/sslcommerz/success
 // SSLCommerz redirects the customer's BROWSER here (via an auto-submitting
@@ -29,10 +32,24 @@ export async function POST(req: NextRequest) {
     if (valId && order.paymentStatus !== "PAID") {
       const validation = await validateSSLCommerzPayment(valId);
       if (validation.isValid) {
-        await prisma.order.update({
+        const updated = await prisma.order.update({
           where: { id: orderId },
           data: { paymentStatus: "PAID", paymentValId: valId },
+          include: { items: true },
         });
+
+        // Same "genuinely confirmed" timing as the Cash on Delivery path
+        // in app/api/orders/route.ts — these fire here, for the FIRST
+        // time this order is validated as paid, never at order creation.
+        // Awaited so it completes before the redirect response is sent,
+        // but sendEmailSafely() never throws, so this can't break the
+        // redirect even if Resend is down or misconfigured.
+        const settings = await prisma.restaurantSettings.findUnique({ where: { id: "singleton" } });
+        const serialized = serializeOrder(updated);
+        await Promise.all([
+          sendOrderConfirmationEmail(serialized),
+          sendNewOrderAlertEmail(serialized, settings?.email || defaultRestaurantSettings.email),
+        ]);
       }
     }
 

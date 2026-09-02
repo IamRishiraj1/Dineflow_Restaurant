@@ -29,7 +29,8 @@
     "@next-auth/prisma-adapter": "^1.0.7",
     "bcryptjs": "^2.4.3",
     "zod": "^3.23.8",
-    "@supabase/supabase-js": "^2.45.4"
+    "@supabase/supabase-js": "^2.45.4",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

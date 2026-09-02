@@ -451,4 +451,248 @@ SSLCommerz confirmation (or COD collection) marks it paid.
   are the natural next steps — ask the user which they'd prefer, same as
   every other phase choice in this project so far.
 
+---
+
+## Session 5: Phase 4 confirmed live in production + Phase 5 (image uploads) built
+
+### Phase 4 — confirmed fully working, deployed, verified in production
+
+The user tested everything from Session 4's checklist and it all passed,
+then pushed to GitHub and deployed to Vercel. **Two real build-breaking
+issues surfaced on Vercel that hadn't shown up locally** (expected — this
+sandbox has never had the ability to run `next build`, only manual
+line-by-line review):
+
+1. **`data/orders.ts` TypeScript error** — the `Order` type gained
+   `paymentValId` during Phase 4, but the 12 mock/seed orders in this file
+   were never updated to include it. Vercel's build (`next build` runs a
+   real TypeScript check; nothing in this sandbox does) caught the
+   mismatch immediately. **Fixed in this session** by inserting
+   `paymentValId: null` after every `paymentStatus:` line — done via a
+   regex substitution across the file rather than manually, then verified
+   the count (12 insertions for 12 orders).
+
+2. **`useSearchParams()` needs a `<Suspense>` boundary`** in
+   `app/(customer)/checkout/payment-failed/page.tsx` — a Next.js App
+   Router requirement for any page that could be statically prerendered.
+   This exact class of bug was already correctly avoided in
+   `app/(customer)/menu/page.tsx` (which wraps `<MenuBrowser />`, also a
+   `useSearchParams()` consumer, in `<Suspense>`) — but the
+   payment-failed page, being newer, was missed. **Fixed in this
+   session** by splitting the component into an inner
+   `PaymentFailedContent` (all the original logic, renamed) and a default-
+   exported `PaymentFailedPage` that wraps it in `<Suspense>` with a
+   skeleton fallback — the exact pattern the user's own build-fix
+   describes, applied here since I only had their fix *description*, not
+   their actual changed files.
+
+**The user did not upload a new code zip this time** — they uploaded a
+markdown write-up describing fixes already applied and pushed via a
+separate session (likely Claude Code again, given the commit-hash-level
+detail). I applied the equivalent fixes directly to this sandbox's
+canonical copy so future zips I generate don't regress these two bugs.
+**I have not been able to verify my reproduction of these fixes is
+byte-for-byte identical to theirs** — only that it satisfies the same
+requirements described (add the missing field; wrap in Suspense). If a
+future session diffs against their actual repo and finds a difference,
+trust their production-verified version, not this reconstruction.
+
+Also closed a smaller gap while finishing Phase 4: **the admin Payments
+page still said "Real gateway payments arrive in Phase 4"** (stale — this
+was written during Phase 2, before Phase 4 existed) **and showed a fake
+synthetic transaction id** (`txn-${order.id.slice(0,10)}`) instead of the
+real SSLCommerz `paymentValId`. Rewrote the page to show the actual
+gateway reference (or `—` for cash/pending orders) in a dedicated
+"Gateway Ref" column, so an admin can genuinely reconcile a payment
+against SSLCommerz's own dashboard — this is a real "business
+handover ready" detail, not cosmetic.
+
+`TODO.md` Phase 4 is now marked "✅ DONE AND VERIFIED LIVE" — this is a
+stronger claim than Session 4's "code complete," and it's warranted: the
+user has confirmed a real sandbox payment, a real failure/cancellation, a
+real retry, AND a real production Vercel deployment all work.
+
+### Phase 5 — Real image uploads (Supabase Storage): built, untested
+
+User asked to continue straight to Phase 5 after the Payments-page fix.
+**Checked for pre-existing files first** (the pattern that showed up 3
+times earlier in this project) — genuinely nothing there this time, built
+from scratch.
+
+**New files:**
+- `lib/supabase-admin.ts` — server-only Supabase client using the
+  service role key (bypasses RLS; heavily commented that it must never be
+  imported into client-side code)
+- `lib/image-compress.ts` — client-side resize/compress via the browser's
+  Canvas API. Deliberately NOT using a server-side library like `sharp`
+  for this — avoids native-dependency deployment risk on Vercel, and
+  means the compression happens before the (potentially huge) original
+  file ever leaves the browser
+- `app/api/upload/route.ts` — admin-only (`requireAdmin()`), re-validates
+  file type/size server-side even though the client already checks (never
+  trust client-side validation alone — someone could call this endpoint
+  directly), uploads to a `food-images` Supabase Storage bucket, returns
+  the public URL
+- `components/ui/ImageUploadField.tsx` — reusable upload widget (preview,
+  upload progress, error state) used by both `FoodFormModal` and
+  `CategoryFormModal`, replacing the old plain "Image URL" text input —
+  but a "paste a URL instead" fallback is kept (collapsed under a
+  `<details>` toggle) rather than removed, so nothing about how existing
+  food/category image URLs work changed
+- `docs/PHASE-5-IMAGE-UPLOAD-SETUP.md` — the one manual step: creating
+  the `food-images` bucket in the Supabase dashboard and toggling it
+  public (uploads themselves stay admin-only via the API route
+  regardless of the bucket's public-read setting — public here only
+  means "anyone can view a photo once uploaded," which is what a
+  restaurant menu needs)
+
+**No schema change this time** — `Food.image` and `Category.image` were
+already plain string fields; this phase only changed *how* a URL gets
+into them (upload UI vs. paste), not the data model.
+
+### ⚠️ Action required before Phase 5 can be tested
+
+1. Create the `food-images` bucket in Supabase Storage (public read) —
+   see `docs/PHASE-5-IMAGE-UPLOAD-SETUP.md`.
+2. No new env vars needed — reuses `NEXT_PUBLIC_SUPABASE_URL` and
+   `SUPABASE_SERVICE_ROLE_KEY` from Phase 1.
+3. `npm run dev`, go to `/admin/foods`, try uploading a real photo
+   (ideally a large one, to actually test compression).
+4. Confirm it displays on `/menu` afterward.
+5. Check the Supabase dashboard's Storage section to confirm the file
+   actually landed there.
+6. **Entirely untested as of writing this** — unlike Phase 4, there was
+   no pre-existing implementation to review here, so treat this as
+   first-draft code with the same appropriate skepticism as Phase 1–3's
+   original builds.
+7. Once confirmed, `git add . && git commit && git push` — should be
+   another clean push.
+
+### If you're a new Claude session picking this up
+
+- Everything from Sessions 2–4's "new session" guidance still applies.
+- **Specifically:** if the user reports a Vercel build failure again
+  (not just a local dev issue), remember this sandbox cannot run
+  `next build` — treat any TypeScript/build-time error they report as
+  something to actually reason through carefully (type mismatches
+  between mock data and evolved types, missing Suspense boundaries
+  around `useSearchParams`/`usePathname` in prerendered pages, etc.),
+  not something to assume "should just work" from a local `npm run dev`
+  session that never caught it either.
+- Phase 6 (email notifications) is the next unstarted phase in
+  `TODO.md`. Phase 7 (deployment hardening / custom domain) and Phase 8
+  (security hardening) are also still open.
+
+---
+
+## Session 6: Phase 6 (email notifications) — built, wired, untested
+
+User asked to continue to Phase 6 (after a brief mix-up where they said
+"build phase 5" right after Phase 5 was already delivered — clarified via
+a quick question and confirmed they meant Phase 6).
+
+### Another pre-existing file — `lib/email.ts`, this time genuinely excellent
+
+Same pattern as Phases 1, 2, and 4: found `lib/email.ts` already fully
+written (180 lines) before I'd built anything. Reviewed it in full per
+the established protocol (this project has enough of these incidents now
+that "review fully before trusting" is just standard procedure here, not
+a one-off). **Verdict: correctly designed, no bugs found in the library
+itself.** Specifically verified:
+- `sendEmailSafely()` never throws — every email send is wrapped in
+  try/catch, logged on failure, swallowed. Correct: a Resend outage
+  should never be able to break checkout or an admin status update.
+- Lazy Resend client construction (`getResendClient()`) — a missing
+  `RESEND_API_KEY` doesn't crash the app at import time, only skips
+  sending (with a console warning) the moment something tries to send.
+- The confirmation-email timing logic was already correctly documented
+  in the function's own JSDoc comment: send for COD at creation, but for
+  online orders ONLY once SSLCommerz validates payment — matching the
+  exact nuance I'd already identified as critical in Phase 4 (an order
+  that hasn't paid yet must never get a "confirmed" email).
+- Table-based inline-styled HTML email layout (not flexbox/grid) —
+  correct practice for cross-email-client compatibility.
+
+**What was missing: the actual wiring.** The library existed but nothing
+in the app called it — `grep` for its exported function names across
+`app/` came back empty. `resend` wasn't even in `package.json`, and no
+`RESEND_*` env vars existed in `.env.example`. So unlike Phase 4 (where
+the integration itself was done and I found one bug in it), this session
+did the full integration work myself, with the already-correct library
+as the foundation:
+
+- Added `resend` to `package.json`
+- Added `RESEND_API_KEY` / `RESEND_FROM_EMAIL` to `.env.example`
+- Wired `sendOrderConfirmationEmail` + `sendNewOrderAlertEmail` into
+  `app/api/orders/route.ts` (POST), gated to `input.paymentMethod ===
+  "cash"` only — online orders deliberately skip this at creation time
+- Wired the same two into `app/api/payments/sslcommerz/success/route.ts`
+  AND `.../ipn/route.ts`, inside the block where payment is newly
+  validated as PAID for the first time (protected by the existing
+  `paymentStatus !== "PAID"` idempotency guard both routes already had
+  from Phase 4 — so the redirect-vs-webhook race can't double-send)
+- Wired `sendOrderStatusUpdateEmail` into `app/api/orders/[id]/route.ts`
+  (PATCH)
+
+**One real bug I introduced and caught before it shipped:** my first
+draft of the status-update wiring compared `input.status !==
+existing.status` directly — but `input.status` is the frontend's
+lowercase string (`"confirmed"`) while `existing.status` is Prisma's
+UPPERCASE enum (`"CONFIRMED"`) read straight from the database. Those
+are never equal as strings, so the check would have evaluated to `true`
+on every single PATCH call regardless of whether the status genuinely
+changed — meaning an admin re-saving the same status, or updating only
+`paymentStatus` with no status change at all, would still trigger a
+"your order status changed!" email. Caught this by re-reading my own
+edit before moving on (not by an external tool), fixed by comparing
+against `orderStatusToDb(input.status)` instead — both sides then in the
+same DB-enum format.
+
+### Setup guide includes an important testing caveat
+
+`docs/PHASE-6-EMAIL-SETUP.md` explains Resend's sandbox restriction
+clearly: the default `onboarding@resend.dev` sender can **only
+successfully deliver to the email address the Resend account itself is
+registered under**, until a domain is verified. Documented exactly how
+to test around this (use your own email as both the checkout email and
+the restaurant's settings email during testing) — this is genuinely easy
+to trip over silently, since `sendEmailSafely()`'s failure-swallowing
+means a send to the wrong address fails with no visible error anywhere
+except Resend's own dashboard logs and the server console.
+
+### ⚠️ Action required before Phase 6 can be tested
+
+1. Sign up for free Resend, get an API key — `docs/PHASE-6-EMAIL-SETUP.md`
+2. `npm install` (new dependency: `resend`)
+3. Set the restaurant's email (`/admin/settings`) to your own
+   Resend-registered email address before testing
+4. Place a COD test order using that same email as the checkout email —
+   confirm both the confirmation and restaurant-alert emails arrive
+5. Change that order's status a few times in `/admin/orders` — confirm a
+   status email arrives for each genuine change, and does NOT fire if you
+   re-select the same status or only change payment status
+6. Complete a full SSLCommerz sandbox payment (Phase 4) — confirm
+   confirmation/alert emails arrive only after payment succeeds, not at
+   checkout
+7. **Entirely untested as of writing this** — same caveat as Phase 5:
+   there was no pre-existing *integration* to verify against (only the
+   library itself, which was reviewed and looks correct), so the wiring
+   built this session is first-draft code.
+8. Once confirmed, `git add . && git commit && git push`
+
+### If you're a new Claude session picking this up
+
+- Everything from Sessions 2–5's guidance still applies.
+- **Specifically for Phase 6:** if emails aren't arriving, the very
+  first thing to check is whether the test is actually being run with
+  matching Resend-registered/restaurant-settings/checkout email addresses
+  — before assuming the wiring itself is broken. Check Resend's own
+  dashboard logs (mentioned in the setup doc) for the real error, rather
+  than guessing from the app's silence (which is expected behavior, not
+  a bug, given `sendEmailSafely()`'s design).
+- Phase 7 (deployment hardening — custom domain, staging environment) and
+  Phase 8 (security hardening — rate limiting, input validation review)
+  are the remaining unstarted phases in `TODO.md`.
+
+
 

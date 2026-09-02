@@ -55,7 +55,7 @@ step needs me to write code, say "let's do step X" and I'll build it.
 
 ---
 
-## PHASE 4 — Real payments ✅ CODE COMPLETE (SSLCommerz)
+## PHASE 4 — Real payments ✅ DONE AND VERIFIED LIVE (SSLCommerz)
 
 *Goal: customers can pay online, not just choose Cash on Delivery.*
 
@@ -65,41 +65,49 @@ step needs me to write code, say "let's do step X" and I'll build it.
 - [x] Built success/fail/cancel redirect handlers AND an IPN webhook handler for reliability (see `docs/PHASE-4-PAYMENT-SETUP.md` for why both exist)
 - [x] Built a `/checkout/payment-failed` page with a "Try Payment Again" retry flow against the same order
 - [x] Removed the old "payment is mocked" fake card-number form fields from checkout
-- [x] **Fixed a real bug found during review:** order creation was still marking `card` payments as `PAID` immediately at checkout, before the customer ever reached SSLCommerz — this would have permanently blocked failed/cancelled payments from ever being correctly marked `FAILED`. Now every order starts `PENDING` regardless of method; only a validated SSLCommerz confirmation (or COD collection, handled elsewhere) marks it paid.
-- [ ] **YOU NEED TO DO THIS:** sign up for a free SSLCommerz sandbox account — see `docs/PHASE-4-PAYMENT-SETUP.md` for exact steps
-- [ ] **YOU NEED TO DO THIS:** run `npm run db:push` (new field: `Order.paymentValId`)
-- [ ] Test a full successful sandbox payment end-to-end
-- [ ] Test a failed/cancelled payment + the retry flow
-- [ ] ⚠️ Unverified: `lib/sslcommerz.ts` was written from training knowledge of SSLCommerz's API, in a sandbox with no internet access to check it against their live docs. Cross-check field names against https://developer.sslcommerz.com/doc/v4/ if the sandbox test doesn't work as expected — see the honesty note at the top of that file.
+- [x] Fixed a real bug found during review: order creation was marking `card` payments as `PAID` immediately at checkout, before the customer ever reached SSLCommerz. Now every order starts `PENDING`; only a validated SSLCommerz confirmation (or COD collection) marks it paid.
+- [x] Admin Payments page now shows the real SSLCommerz `paymentValId` as a "Gateway Ref" column (for reconciling against SSLCommerz's own dashboard) instead of a fake synthetic transaction id
+- [x] Signed up for SSLCommerz sandbox, ran `db:push`, tested a full successful payment, a failed payment, and the retry flow — **all confirmed working**
+- [x] Fixed `data/orders.ts` — the 12 mock orders were missing the new `paymentValId` field, which broke the Vercel production build (TypeScript error, not caught locally in this sandbox since there's no way to run `next build` here)
+- [x] Fixed `app/(customer)/checkout/payment-failed/page.tsx` — `useSearchParams()` needs a `<Suspense>` boundary for Next.js's static prerendering, which also broke the Vercel build. Restructured into a `PaymentFailedContent` inner component wrapped by the default-exported `PaymentFailedPage`.
+- [x] **Deployed to Vercel and confirmed working in production** — full sandbox payment flow (success, fail, cancel, retry) verified live, not just locally
 - [ ] Register a **live** merchant account only once you have a real client ready to accept real payments (requires business documents, takes a few business days — see the last section of the setup doc)
 - [ ] Switch `SSLCOMMERZ_IS_LIVE` to `"true"` with live credentials only after live testing
 
 ---
 
-## PHASE 5 — Real image uploads
+## PHASE 5 — Real image uploads ✅ CODE COMPLETE
 
 *Goal: the restaurant owner can upload their own food photos through the admin panel.*
 
-- [ ] Create a Supabase Storage bucket (e.g. `food-images`)
-- [ ] Set the bucket's access policy (public read, authenticated write)
-- [ ] Add an upload API route that accepts an image file and stores it in Supabase Storage
-- [ ] Replace the "Image URL" text field in `FoodFormModal` / `CategoryFormModal` with a real file upload input
-- [ ] Add image compression/resizing before upload (so large phone photos don't slow the site down)
+- [x] Built `lib/image-compress.ts` — client-side resize/compress via the browser's Canvas API (no new dependency, no server-side native library needed)
+- [x] Built `app/api/upload/route.ts` — admin-only, validates file type/size server-side (never trusts the client-side check alone), uploads to Supabase Storage, returns the public URL
+- [x] Built `components/ui/ImageUploadField.tsx` — reusable upload UI with preview, used by both `FoodFormModal` and `CategoryFormModal`, with "paste a URL instead" kept as a fallback option
+- [x] Replaced the plain "Image URL" text field in both admin forms
+- [ ] **YOU NEED TO DO THIS:** create the `food-images` bucket in Supabase Storage — see `docs/PHASE-5-IMAGE-UPLOAD-SETUP.md`
 - [ ] Test: upload a real food photo from the admin panel, confirm it displays correctly on the menu
+- [ ] Test: upload a large phone photo, confirm it still uploads reasonably fast (compression working)
 
 ---
 
-## PHASE 6 — Notifications
+## PHASE 6 — Notifications ✅ CODE COMPLETE (Resend)
 
 *Goal: customers and the restaurant get notified automatically, not just via on-screen UI.*
 
-- [x] **Admin-side in-app live updates** — done ahead of schedule. `app/admin/layout.tsx` now polls every 10 seconds and toasts "New order received" the moment one comes in, from anywhere in the admin dashboard. `AdminHeader`'s notification bell shows real orders that need attention (placed/confirmed/payment-failed) instead of hardcoded mock text. This covers "the restaurant gets notified" for anyone who has the dashboard open — it does NOT cover being notified while away from the screen (that needs email/push, below).
-- [ ] Choose an email provider (Resend is simple and has a generous free tier)
-- [ ] Send an order confirmation email to the customer when they place an order
-- [ ] Send a "your order is ready" / status-change email to the customer (the customer's tracking page at `/track-order/[id]` already polls every 8 seconds and updates live if they have it open — this item is about reaching them when they DON'T have it open)
-- [ ] Send a new-order alert email to the restaurant's inbox when an order comes in (for when no one's watching the dashboard)
+- [x] **Admin-side in-app live updates** — done ahead of schedule. `app/admin/layout.tsx` polls every 10 seconds and toasts "New order received" the moment one comes in. `AdminHeader`'s notification bell shows real orders needing attention.
+- [x] Chose **Resend** — simple API, generous free tier (3,000/month), no SMTP setup
+- [x] Built `lib/email.ts` — three email types (confirmation, status update, new-order alert), a shared inline-styled HTML shell (table-based layout for email-client compatibility), and a `sendEmailSafely()` wrapper so a Resend outage or missing API key can never break checkout or an admin action — failures are logged and swallowed, never thrown
+- [x] Wired the **confirmation + restaurant alert** emails into `app/api/orders/route.ts` (fires immediately for Cash on Delivery) AND `app/api/payments/sslcommerz/{success,ipn}/route.ts` (fires only once SSLCommerz actually validates payment for online orders — deliberately NOT at order creation, so a customer never gets a "confirmed" email for a payment that then fails)
+- [x] Wired the **status-update** email into `app/api/orders/[id]/route.ts` — fires only when `status` actually changes to a different value (compared in DB-enum format, not the frontend's lowercase strings, to avoid a same-value comparison bug that would've fired on every PATCH)
+- [x] Idempotency verified: the IPN handler's existing `if (order.paymentStatus === "PAID") return` guard means the success-redirect and IPN webhook racing each other can't send duplicate confirmation emails
+- [ ] **YOU NEED TO DO THIS:** sign up for free Resend account — see `docs/PHASE-6-EMAIL-SETUP.md`
+- [ ] **YOU NEED TO DO THIS:** run `npm install` (new dependency: `resend`)
+- [ ] ⚠️ **Read this before testing:** Resend's sandbox sender can ONLY email the address your Resend account is registered under, until you verify a domain. Use your own email as both the restaurant's settings email AND the checkout email when testing, or every send will silently fail (logged server-side, but swallowed — checkout won't show an error). Full explanation in the setup doc.
+- [ ] Test: place a COD order as yourself, confirm you get both the confirmation and the restaurant-alert email
+- [ ] Test: change that order's status a few times in `/admin/orders`, confirm a status email arrives each time
+- [ ] Test: complete a full SSLCommerz sandbox payment, confirm the confirmation/alert emails arrive only AFTER payment succeeds, not at checkout
 - [ ] (Optional) Add SMS notifications via a provider like Twilio for delivery updates
-- [ ] (Optional, no external service needed) Browser push notifications via the Web Notifications API for customers who keep the tracking tab open in the background — smaller lift than email, but only works while that tab is open in that browser, so it complements rather than replaces email
+- [ ] (Optional, no external service needed) Browser push notifications via the Web Notifications API for customers who keep the tracking tab open in the background
 
 ---
 

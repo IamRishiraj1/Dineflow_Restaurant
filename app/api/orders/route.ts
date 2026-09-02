@@ -7,6 +7,8 @@ import { placeOrderInputSchema } from "@/lib/validation";
 import { withErrorHandling, apiError } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/session";
 import { generateOrderNumber } from "@/lib/utils";
+import { sendOrderConfirmationEmail, sendNewOrderAlertEmail } from "@/lib/email";
+import { defaultRestaurantSettings } from "@/data/restaurant";
 
 // GET /api/orders            — every order, newest first. Admin-only.
 // GET /api/orders?mine=true  — only the logged-in customer's own orders.
@@ -112,5 +114,23 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     throw new Error("Could not generate a unique order number after several attempts.");
   }
 
-  return NextResponse.json(serializeOrder(order), { status: 201 });
+  const serialized = serializeOrder(order);
+
+  // Cash on Delivery orders are genuinely confirmed the moment they're
+  // placed — there's no payment step to wait for, unlike online orders
+  // (see app/api/payments/sslcommerz/{success,ipn}/route.ts, which send
+  // these same two emails but only once SSLCommerz actually validates
+  // payment). Awaited (not fire-and-forget) so the send actually
+  // completes before this serverless function's response returns — but
+  // sendEmailSafely() never throws, so a Resend outage or missing API key
+  // can't fail the checkout itself, only skip the email.
+  if (input.paymentMethod === "cash") {
+    const settings = await prisma.restaurantSettings.findUnique({ where: { id: "singleton" } });
+    await Promise.all([
+      sendOrderConfirmationEmail(serialized),
+      sendNewOrderAlertEmail(serialized, settings?.email || defaultRestaurantSettings.email),
+    ]);
+  }
+
+  return NextResponse.json(serialized, { status: 201 });
 });

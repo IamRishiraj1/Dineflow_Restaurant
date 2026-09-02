@@ -4,6 +4,7 @@ import { serializeOrder, orderStatusToDb, paymentStatusToDb } from "@/lib/serial
 import { orderUpdateSchema } from "@/lib/validation";
 import { withErrorHandling, apiError } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/session";
+import { sendOrderStatusUpdateEmail } from "@/lib/email";
 
 interface Params {
   params: { id: string };
@@ -61,5 +62,21 @@ export const PATCH = withErrorHandling(async (req: NextRequest, { params }: Para
     include: { items: true },
   });
 
-  return NextResponse.json(serializeOrder(order));
+  const serialized = serializeOrder(order);
+
+  // Only email the customer when the STATUS actually changed (not when
+  // this call only touched paymentStatus), and only if it's genuinely
+  // different from before — an admin re-selecting the same status in the
+  // dropdown shouldn't re-send an email. Comparing against the DB-format
+  // value (orderStatusToDb(input.status)) rather than input.status
+  // directly, since `existing.status` is Prisma's UPPERCASE enum
+  // ("CONFIRMED") while input.status is the frontend's lowercase string
+  // ("confirmed") — comparing those directly would never be equal, and
+  // the email would fire on every single status PATCH regardless of
+  // whether anything actually changed.
+  if (input.status && orderStatusToDb(input.status) !== existing.status) {
+    await sendOrderStatusUpdateEmail(serialized);
+  }
+
+  return NextResponse.json(serialized);
 });

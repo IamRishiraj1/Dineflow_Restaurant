@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Category } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { Button } from "@/components/ui/Button";
 
 interface CategoryFormModalProps {
@@ -82,12 +83,11 @@ export function CategoryFormModal({ isOpen, onClose, onSubmit, initialCategory }
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           placeholder="Short tagline shown on the category card"
         />
-        <Input
-          label="Image URL"
-          hint="Leave blank to use a placeholder image"
+        <ImageUploadField
+          label="Category photo"
           value={form.image}
-          onChange={(e) => setForm({ ...form, image: e.target.value })}
-          placeholder="https://…"
+          onChange={(url) => setForm({ ...form, image: url })}
+          hint="Leave blank to use a placeholder image"
         />
         <label className="flex items-center gap-2.5 text-sm text-ink-700">
           <input

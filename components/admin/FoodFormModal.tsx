@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Food, Category } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -154,12 +155,11 @@ export function FoodFormModal({ isOpen, onClose, onSubmit, categories, initialFo
           value={form.ingredients}
           onChange={(e) => setForm({ ...form, ingredients: e.target.value })}
         />
-        <Input
-          label="Image URL"
-          hint="Leave blank to use a placeholder image"
+        <ImageUploadField
+          label="Food photo"
           value={form.image}
-          onChange={(e) => setForm({ ...form, image: e.target.value })}
-          placeholder="https://…"
+          onChange={(url) => setForm({ ...form, image: url })}
+          hint="Leave blank to use a placeholder image"
         />
         <label className="flex items-center gap-2.5 text-sm text-ink-700">
           <input

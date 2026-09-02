@@ -10,9 +10,9 @@ import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 // Transactions are derived directly from real orders — every order that
 // exists has exactly one associated "transaction" in this simplified
-// model. See TODO.md Phase 4 for wiring in a real payment gateway, which
-// will introduce a genuine separate Transaction record (gateway reference
-// IDs, retries, refunds, etc.) instead of this 1:1 mapping.
+// model, rather than a genuinely separate Transaction table supporting
+// partial refunds, multiple attempts per order, etc. That's a reasonable
+// simplification for now; revisit if refund tracking becomes a real need.
 export default function AdminPaymentsPage() {
   const { orders, isLoading, loadAll } = useOrders();
 
@@ -26,16 +26,9 @@ export default function AdminPaymentsPage() {
   const failedOrders = orders.filter((o) => o.paymentStatus === "failed");
   const totalRevenue = paidOrders.reduce((sum, o) => sum + o.total, 0);
 
-  const transactions = [...orders]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .map((o) => ({
-      id: `txn-${o.id.slice(0, 10)}`,
-      orderId: o.orderNumber,
-      amount: o.total,
-      method: o.paymentMethod,
-      status: o.paymentStatus,
-      date: o.createdAt,
-    }));
+  const transactions = [...orders].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   if (isLoading) {
     return (
@@ -63,34 +56,48 @@ export default function AdminPaymentsPage() {
         <div className="border-b border-ink-100 p-5">
           <h2 className="font-display text-base font-semibold text-ink-900">Transactions</h2>
           <p className="mt-1 text-sm text-ink-500">
-            Cash-on-delivery orders show as pending until collected. Real gateway payments arrive in Phase 4.
+            Cash on Delivery orders show as pending until collected. Online payments are processed
+            via SSLCommerz — the Gateway Ref below is SSLCommerz&apos;s own validation id, useful if
+            you ever need to look a payment up on their dashboard directly.
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
-                <th className="py-3 pl-5 pr-4 font-medium">Transaction ID</th>
-                <th className="py-3 pr-4 font-medium">Order ID</th>
+                <th className="py-3 pl-5 pr-4 font-medium">Order</th>
                 <th className="py-3 pr-4 font-medium">Amount</th>
                 <th className="py-3 pr-4 font-medium">Method</th>
+                <th className="py-3 pr-4 font-medium">Gateway Ref</th>
                 <th className="py-3 pr-4 font-medium">Status</th>
                 <th className="py-3 pr-5 font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
-              {transactions.map((txn) => (
-                <tr key={txn.id} className="border-b border-ink-50 last:border-none hover:bg-ink-50/50">
-                  <td className="py-3 pl-5 pr-4 font-mono text-xs text-ink-600">{txn.id}</td>
-                  <td className="py-3 pr-4 font-medium text-ink-900">{txn.orderId}</td>
-                  <td className="py-3 pr-4 font-medium text-ink-900">{formatCurrency(txn.amount)}</td>
-                  <td className="py-3 pr-4 capitalize text-ink-600">{txn.method === "cash" ? "Cash on delivery" : "Card"}</td>
+              {transactions.map((order) => (
+                <tr key={order.id} className="border-b border-ink-50 last:border-none hover:bg-ink-50/50">
+                  <td className="py-3 pl-5 pr-4 font-medium text-ink-900">{order.orderNumber}</td>
+                  <td className="py-3 pr-4 font-medium text-ink-900">{formatCurrency(order.total)}</td>
+                  <td className="py-3 pr-4 text-ink-600">
+                    {order.paymentMethod === "cash" ? "Cash on Delivery" : "Online (SSLCommerz)"}
+                  </td>
+                  <td className="py-3 pr-4 font-mono text-xs text-ink-500">
+                    {order.paymentValId ?? "—"}
+                  </td>
                   <td className="py-3 pr-4">
-                    <Badge variant={txn.status === "paid" ? "success" : txn.status === "pending" ? "warning" : "error"}>
-                      {txn.status}
+                    <Badge
+                      variant={
+                        order.paymentStatus === "paid"
+                          ? "success"
+                          : order.paymentStatus === "pending"
+                            ? "warning"
+                            : "error"
+                      }
+                    >
+                      {order.paymentStatus}
                     </Badge>
                   </td>
-                  <td className="py-3 pr-5 text-ink-400">{formatDateTime(txn.date)}</td>
+                  <td className="py-3 pr-5 text-ink-400">{formatDateTime(order.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

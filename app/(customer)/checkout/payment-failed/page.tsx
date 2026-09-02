@@ -106,12 +106,19 @@ function PaymentFailedContent() {
   );
 }
 
+// useSearchParams() requires a Suspense boundary in Next.js's App Router
+// whenever the page could be statically prerendered at build time — without
+// this, `next build` fails with "useSearchParams() should be wrapped in a
+// suspense boundary". The fallback below is only ever visible for a
+// fraction of a second while the search params resolve client-side.
 export default function PaymentFailedPage() {
   return (
     <Suspense
       fallback={
         <div className="mx-auto max-w-xl px-4 py-16 sm:px-6 lg:px-8">
-          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="mx-auto h-16 w-16 rounded-full" />
+          <Skeleton className="mx-auto mt-5 h-8 w-64 rounded-lg" />
+          <Skeleton className="mt-8 h-40 w-full rounded-2xl" />
         </div>
       }
     >
