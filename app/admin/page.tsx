@@ -10,7 +10,7 @@ import { RecentOrdersTable } from "@/components/admin/RecentOrdersTable";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useOrders } from "@/context/OrderContext";
 import { useCatalog } from "@/context/CatalogContext";
-import { last7DaysStats } from "@/data/analytics";
+import { buildDailyStats } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/utils";
 
 function isToday(iso: string) {
@@ -36,18 +36,15 @@ export default function AdminDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Computed from real orders in the database, not the static mock
-  // analytics file — this is genuinely live now that Phase 2 is wired up.
-  // The 7-day trend charts below still use the mock series, since there
-  // isn't yet a week of real order history to chart (see TODO.md — a
-  // proper analytics query is a good next enhancement once real traffic
-  // exists).
+  // Computed from real orders in the database — the mock analytics file
+  // is no longer used anywhere on this page.
   const todaysOrders = orders.filter((o) => isToday(o.createdAt));
   const todayRevenue = todaysOrders
     .filter((o) => o.paymentStatus === "paid")
     .reduce((sum, o) => sum + o.total, 0);
   const pendingOrders = orders.filter((o) => ["placed", "confirmed", "preparing"].includes(o.status)).length;
   const completedOrders = orders.filter((o) => o.status === "completed").length;
+  const last7DaysStats = buildDailyStats(orders, 7);
 
   const popularFoods = foods.filter((f) => f.isPopular).slice(0, 5);
   const recentOrders = [...orders]
