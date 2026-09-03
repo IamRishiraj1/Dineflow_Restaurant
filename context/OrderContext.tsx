@@ -29,6 +29,13 @@ interface OrderContextValue {
   loadAll: () => Promise<void>;
   /** Loads only the logged-in customer's own orders. Call from My Orders. */
   loadMine: () => Promise<void>;
+  /** Admin-only: silently re-fetches every order in the background, without
+   *  touching isLoading or error. Use this for polling/auto-refresh (see
+   *  app/admin/layout.tsx) — loadAll() is for the one real "first load,"
+   *  where showing a loading skeleton is correct; a background poll every
+   *  few seconds should update the data without flashing every admin
+   *  page's skeleton back on top of content that's already loaded fine. */
+  refreshAll: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextValue | undefined>(undefined);
@@ -80,6 +87,21 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : "Failed to load your orders.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  // Same request as loadAll(), but never touches isLoading or error — see
+  // the doc comment on refreshAll in OrderContextValue for why. A failed
+  // background poll fails silently and just tries again on the next
+  // interval, rather than surfacing an error banner over data that was
+  // displaying just fine a moment ago.
+  async function refreshAll() {
+    try {
+      const res = await fetch("/api/orders");
+      const data = await unwrap<Order[]>(res);
+      setOrders(data);
+    } catch {
+      // silent — see comment above
     }
   }
 
@@ -167,6 +189,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         updatePaymentStatus,
         loadAll,
         loadMine,
+        refreshAll,
       }}
     >
       {children}

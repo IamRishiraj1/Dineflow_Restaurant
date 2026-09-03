@@ -12,7 +12,7 @@ const POLL_INTERVAL_MS = 10000;
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { orders, loadAll } = useOrders();
+  const { orders, loadAll, refreshAll } = useOrders();
   const { showToast } = useToast();
 
   // Tracks which order ids we've already shown a toast for, so a poll that
@@ -28,9 +28,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // polling keeps running as the admin navigates between admin pages, and
   // the "new order" toast fires no matter which admin page they're looking
   // at, not just /admin/orders.
+  //
+  // loadAll() runs once, for the real first load — every admin page reads
+  // isLoading from this same context to show a full-page skeleton while
+  // that happens, which is correct exactly once. The recurring poll calls
+  // refreshAll() instead, which updates `orders` silently without
+  // touching isLoading — using loadAll() here would flip isLoading back to
+  // true every 10 seconds, which re-triggers every admin page's loading
+  // skeleton and looks like the whole dashboard is constantly buffering/
+  // refreshing, even though nothing is actually wrong.
   useEffect(() => {
     loadAll();
-    const interval = window.setInterval(loadAll, POLL_INTERVAL_MS);
+    const interval = window.setInterval(refreshAll, POLL_INTERVAL_MS);
     return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
