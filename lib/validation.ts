@@ -80,3 +80,9 @@ export const settingsUpdateSchema = z.object({
     )
     .optional(),
 });
+
+export const contactMessageInputSchema = z.object({
+  name: z.string().min(1).max(120),
+  email: z.string().email(),
+  message: z.string().min(10).max(2000),
+});

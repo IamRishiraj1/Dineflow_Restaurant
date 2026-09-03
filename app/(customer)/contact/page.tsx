@@ -14,14 +14,34 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
-    window.setTimeout(() => {
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // data.error is already a readable string from apiError /
+        // apiValidationError — safe to show directly, no reformatting needed.
+        showToast(data.error ?? "Something went wrong. Please try again.", "error");
+        return;
+      }
+
       showToast("Message sent — we'll get back to you soon", "success");
       setForm({ name: "", email: "", message: "" });
+    } catch {
+      // fetch itself threw — a real network failure, not just a non-2xx response.
+      showToast("Couldn't reach the server. Check your connection and try again.", "error");
+    } finally {
       setIsSubmitting(false);
-    }, 600);
+    }
   }
 
   return (

@@ -101,9 +101,10 @@ function itemsTableHtml(order: Order): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// The three emails this project sends. Call sites are documented on each
+// The emails this project sends. Call sites are documented on each
 // function — see app/api/orders/route.ts, app/api/orders/[id]/route.ts,
-// and app/api/payments/sslcommerz/{success,ipn}/route.ts.
+// app/api/payments/sslcommerz/{success,ipn}/route.ts, and
+// app/api/contact/route.ts.
 // ─────────────────────────────────────────────────────────────────────────
 
 /** Sent to the customer once an order is genuinely confirmed — immediately
@@ -177,4 +178,50 @@ export async function sendNewOrderAlertEmail(order: Order, restaurantEmail: stri
     `
   );
   await sendEmailSafely({ to: restaurantEmail, subject: `New order: ${order.orderNumber}`, html });
+}
+
+/** Sent to the restaurant's own inbox when a customer submits the contact
+ *  form. Reply-To is set to the customer's address so the restaurant can
+ *  just hit reply. Returns { sent: boolean } — deliberately NOT routed
+ *  through sendEmailSafely() like the three functions above, since those
+ *  are fire-and-forget by design (an email failure must never break an
+ *  order), whereas the contact form's entire job IS sending this email —
+ *  app/api/contact/route.ts needs to know if it genuinely failed so it can
+ *  tell the customer honestly instead of showing a false "sent". */
+export async function sendContactMessageEmail(
+  input: { name: string; email: string; message: string },
+  restaurantEmail: string
+): Promise<{ sent: boolean }> {
+  const resend = getResendClient();
+  if (!resend) {
+    console.warn(`RESEND_API_KEY not set — skipped contact email from ${input.email}`);
+    return { sent: false };
+  }
+
+  const html = emailShell(
+    "New message from your website",
+    `
+    <p style="margin:0 0 4px;color:#4C453B;font-size:15px;"><strong>${input.name}</strong> — ${input.email}</p>
+    <p style="margin:16px 0 0;color:#4C453B;font-size:14px;white-space:pre-wrap;">${input.message}</p>
+    `
+  );
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: restaurantEmail,
+      replyTo: input.email,
+      subject: `New message from ${input.name} (via contact form)`,
+      html,
+    });
+
+    if (error) {
+      console.error("Resend error sending contact message:", error);
+      return { sent: false };
+    }
+    return { sent: true };
+  } catch (err) {
+    console.error(`Failed to send contact email from ${input.email}:`, err);
+    return { sent: false };
+  }
 }
