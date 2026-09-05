@@ -1,9 +1,60 @@
 import Link from "next/link";
 import { ChefHat, Facebook, Instagram, Twitter, MapPin, Phone, Mail, Clock } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 import { defaultRestaurantSettings } from "@/data/restaurant";
 
-export function Footer() {
-  const settings = defaultRestaurantSettings;
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+// "14:00" -> "2:00 PM"
+function formatTime12h(time: string) {
+  const [h, m] = time.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+// Collapses the 7 per-day entries into display rows, merging consecutive
+// days that share identical hours — e.g. four separate Mon/Tue/Wed/Thu
+// entries with the same open/close become a single "Mon – Thu" row,
+// matching how a restaurant's hours normally read on a menu or footer.
+function groupOpeningHours(hours: { day: string; isOpen: boolean; open: string; close: string }[]) {
+  const ordered = [...hours].sort((a, b) => WEEKDAYS.indexOf(a.day) - WEEKDAYS.indexOf(b.day));
+
+  const groups: { label: string; text: string }[] = [];
+
+  for (const entry of ordered) {
+    const text = entry.isOpen ? `${formatTime12h(entry.open)} – ${formatTime12h(entry.close)}` : "Closed";
+    const abbrev = entry.day.slice(0, 3);
+    const last = groups[groups.length - 1];
+
+    if (last && last.text === text) {
+      const startDay = last.label.split(" – ")[0];
+      last.label = `${startDay} – ${abbrev}`;
+    } else {
+      groups.push({ label: abbrev, text });
+    }
+  }
+
+  return groups;
+}
+
+// Server Component — reads the live RestaurantSettings row so the footer
+// (contact info AND opening hours) always reflects whatever's actually
+// saved in the admin Settings page, rather than static placeholder values.
+// Falls back to data/restaurant.ts defaults only if the settings row
+// doesn't exist yet (e.g. the seed script hasn't run), same as
+// GET /api/settings does.
+export async function Footer() {
+  const settings =
+    (await prisma.restaurantSettings.findUnique({ where: { id: "singleton" } })) ??
+    defaultRestaurantSettings;
+
+  const hoursGroups = groupOpeningHours(settings.openingHours as {
+    day: string;
+    isOpen: boolean;
+    open: string;
+    close: string;
+  }[]);
 
   return (
     <footer className="border-t border-ink-800 bg-ink-950 text-cream-100">
@@ -72,12 +123,12 @@ export function Footer() {
               Opening Hours
             </h3>
             <ul className="mt-4 space-y-2 text-sm text-ink-300">
-              <li className="flex items-center gap-2">
-                <Clock className="h-4 w-4 shrink-0 text-ember-400" />
-                Mon – Thu: 10:00 AM – 10:00 PM
-              </li>
-              <li className="pl-6">Fri: 2:00 PM – 11:00 PM</li>
-              <li className="pl-6">Sat – Sun: 10:00 AM – 11:00 PM</li>
+              {hoursGroups.map((group, i) => (
+                <li key={group.label} className={i === 0 ? "flex items-center gap-2" : "pl-6"}>
+                  {i === 0 && <Clock className="h-4 w-4 shrink-0 text-ember-400" />}
+                  {group.label}: {group.text}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
