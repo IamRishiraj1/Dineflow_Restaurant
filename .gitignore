@@ -9,3 +9,13 @@ npm-debug.log*
 /prisma/migrations/dev.db*
 *.tsbuildinfo
 /supabase
+# Internal project docs — not needed in the public repo
+CLAUDE.md
+DINEFLOW_CONTEXT.md
+DINEFLOW_REQUIREMENTS.md
+ROADMAP.md
+TODO.md
+case-study.html
+case-study.pdf
+linkedin-post.md
+
