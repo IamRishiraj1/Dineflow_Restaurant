@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateSSLCommerzPayment } from "@/lib/sslcommerz";
+import { validateSSLCommerzPayment, paymentAmountMatches } from "@/lib/sslcommerz";
 import { serializeOrder } from "@/lib/serializers";
 import { sendOrderConfirmationEmail, sendNewOrderAlertEmail } from "@/lib/email";
 import { defaultRestaurantSettings } from "@/data/restaurant";
@@ -42,10 +42,18 @@ export async function POST(req: NextRequest) {
     }
 
     const validation = await validateSSLCommerzPayment(valId);
+    const amountOk = validation.isValid && paymentAmountMatches(validation, order.total);
+
+    if (validation.isValid && !amountOk) {
+      console.error(
+        `SSLCommerz IPN amount mismatch on order ${orderId}: expected ৳${order.total}, ` +
+          `SSLCommerz confirmed ৳${validation.amount} (val_id ${valId}). Payment NOT marked as paid.`
+      );
+    }
 
     const updated = await prisma.order.update({
       where: { id: orderId },
-      data: validation.isValid
+      data: amountOk
         ? { paymentStatus: "PAID", paymentValId: valId }
         : { paymentStatus: "FAILED" },
       include: { items: true },
@@ -55,7 +63,7 @@ export async function POST(req: NextRequest) {
     // so this only ever fires the first time an order is validated as
     // paid — if the success-redirect handler already sent these emails
     // moments earlier, the IPN webhook won't send them again.
-    if (validation.isValid) {
+    if (amountOk) {
       const settings = await prisma.restaurantSettings.findUnique({ where: { id: "singleton" } });
       const serialized = serializeOrder(updated);
       await Promise.all([

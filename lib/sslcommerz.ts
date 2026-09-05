@@ -132,6 +132,29 @@ export interface ValidationResult {
   cardType?: string;
 }
 
+// A whole-taka rounding allowance — not a security loophole. This project
+// stores order totals as whole taka (see InitiatePaymentInput.amount above),
+// so a legitimate payment should match exactly; this just absorbs any
+// string/number formatting noise from SSLCommerz's response (e.g. "1300.00"
+// parsing artifacts), not real discrepancies. A genuine tampering attempt —
+// paying a smaller amount for a larger order — will always be far more than
+// ৳1 off and will still be caught.
+const AMOUNT_TOLERANCE_BDT = 1;
+
+/**
+ * SECURITY: a valid val_id only proves a real payment happened — it does
+ * NOT prove it was for the right amount. Without this check, confirming
+ * *any* successfully validated payment as PAID at the order's full stored
+ * total would let someone pay less than an order costs (via any bug or
+ * future change in how total_amount reaches SSLCommerz) and still have it
+ * marked fully paid. Every call site that marks an order PAID must call
+ * this alongside validateSSLCommerzPayment() — isValid alone is not enough.
+ */
+export function paymentAmountMatches(validation: ValidationResult, expectedAmount: number): boolean {
+  if (validation.amount === undefined) return false;
+  return Math.abs(validation.amount - expectedAmount) <= AMOUNT_TOLERANCE_BDT;
+}
+
 /**
  * Server-to-server check with SSLCommerz — this is the ONLY thing that
  * should ever cause an order to be marked as paid. Never trust the status

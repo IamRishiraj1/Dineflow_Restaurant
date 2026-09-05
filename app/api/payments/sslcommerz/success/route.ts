@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateSSLCommerzPayment } from "@/lib/sslcommerz";
+import { validateSSLCommerzPayment, paymentAmountMatches } from "@/lib/sslcommerz";
 import { serializeOrder } from "@/lib/serializers";
 import { sendOrderConfirmationEmail, sendNewOrderAlertEmail } from "@/lib/email";
 import { defaultRestaurantSettings } from "@/data/restaurant";
@@ -31,7 +31,13 @@ export async function POST(req: NextRequest) {
 
     if (valId && order.paymentStatus !== "PAID") {
       const validation = await validateSSLCommerzPayment(valId);
-      if (validation.isValid) {
+
+      if (validation.isValid && !paymentAmountMatches(validation, order.total)) {
+        console.error(
+          `SSLCommerz amount mismatch on order ${orderId}: expected ৳${order.total}, ` +
+            `SSLCommerz confirmed ৳${validation.amount} (val_id ${valId}). Payment NOT marked as paid.`
+        );
+      } else if (validation.isValid) {
         const updated = await prisma.order.update({
           where: { id: orderId },
           data: { paymentStatus: "PAID", paymentValId: valId },
