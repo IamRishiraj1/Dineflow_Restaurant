@@ -1,5 +1,6 @@
 import { PrismaClient, OrderType, PaymentMethod, PaymentStatus, OrderStatus, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { categories as mockCategories } from "../data/categories";
 import { foods as mockFoods } from "../data/foods";
 import { mockOrders } from "../data/orders";
@@ -124,9 +125,15 @@ async function seedRestaurantSettings() {
 }
 
 async function seedAdminUser() {
-  // Change this password immediately after your first login in production.
   const email = "admin@dineflow.example";
-  const plainPassword = "ChangeMe123!";
+
+  // A hardcoded password here is a real, working credential for anyone
+  // who reads this file — and this file is committed to git. Set
+  // ADMIN_SEED_PASSWORD in your environment before seeding a *fresh*
+  // database to choose your own; otherwise a random one is generated.
+  // Either way, the password is never logged — if you used the random
+  // fallback, set your own with scripts/set-admin-password.ts afterward.
+  const plainPassword = process.env.ADMIN_SEED_PASSWORD ?? randomBytes(12).toString("base64url");
   const hashed = await bcrypt.hash(plainPassword, 10);
 
   await prisma.user.upsert({
@@ -139,7 +146,13 @@ async function seedAdminUser() {
       role: Role.ADMIN,
     },
   });
-  console.log(`Seeded admin user → email: ${email} / password: ${plainPassword}`);
+
+  console.log(
+    process.env.ADMIN_SEED_PASSWORD
+      ? `Seeded admin user → email: ${email} (password set from ADMIN_SEED_PASSWORD)`
+      : `Seeded admin user → email: ${email}. No ADMIN_SEED_PASSWORD was set, so a random password was ` +
+          `generated and NOT logged — run scripts/set-admin-password.ts to set one you know.`
+  );
 }
 
 async function main() {
