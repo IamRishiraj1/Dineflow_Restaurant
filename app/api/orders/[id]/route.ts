@@ -15,25 +15,42 @@ interface Params {
 // param in different places (e.g. /track-order/[id] uses the internal id
 // after checkout).
 //
-// Deliberately left open (no auth required): a guest who just checked out
-// without an account still needs to view their own confirmation/tracking
-// page, and the only "key" they have is this id/order number. This is the
-// same pattern most delivery sites use for guest order tracking.
+// Deliberately left open (no auth required) for lookups by the internal
+// cuid id: a guest who just checked out without an account still needs
+// to view their own confirmation/tracking page, and the only "key" they
+// have is this id. cuids are effectively unguessable, so this is safe.
 //
-// ⚠️ Known limitation (see TODO.md Phase 8): the order number is a short
-// random 5-digit code, which is low-entropy as a secret — someone could
-// feasibly guess a valid one. A future hardening pass should require the
-// customer's email as a second factor for lookups by order NUMBER (not
-// needed when looking up by the internal cuid id, which is effectively
-// unguessable).
-export const GET = withErrorHandling(async (_req: NextRequest, { params }: Params) => {
+// Lookups by the customer-facing order NUMBER are a different story —
+// it's a short random 5-digit code (only ~90,000 possibilities, see
+// generateOrderNumber() in lib/utils.ts), which is far too small a space
+// to treat as a secret on its own. Every link in this app already uses
+// the internal id instead (see OrderCard.tsx, order-confirmation/[id]),
+// so this path isn't exercised by the UI today — but the route itself
+// still needs to not be an open door for anyone who just enumerates
+// order numbers. Requiring the order's own email as a second factor
+// closes that off without touching any existing, working flow.
+export const GET = withErrorHandling(async (req: NextRequest, { params }: Params) => {
+  const isOrderNumber = params.id.startsWith("DF-");
+
   const order = await prisma.order.findFirst({
-    where: { OR: [{ id: params.id }, { orderNumber: params.id }] },
+    where: isOrderNumber ? { orderNumber: params.id } : { id: params.id },
     include: { items: true },
   });
+
   if (!order) {
     return apiError("Order not found.", 404);
   }
+
+  if (isOrderNumber) {
+    const providedEmail = req.nextUrl.searchParams.get("email")?.trim().toLowerCase();
+    // Same 404 for "doesn't exist" and "wrong email" — never confirm to a
+    // caller that a given order NUMBER is real unless they also know the
+    // email on it.
+    if (!providedEmail || providedEmail !== order.email.toLowerCase()) {
+      return apiError("Order not found.", 404);
+    }
+  }
+
   return NextResponse.json(serializeOrder(order));
 });
 
