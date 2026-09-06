@@ -86,3 +86,18 @@ export const contactMessageInputSchema = z.object({
   email: z.string().email(),
   message: z.string().min(10).max(2000),
 });
+
+// The four SSLCommerz callback routes (success/fail/cancel/ipn) all
+// receive the same shape of form-encoded payload, just used slightly
+// differently by each — this is the single source of truth for what a
+// well-formed callback looks like, instead of each route reading fields
+// with ad hoc formData.get(...)?.toString() calls and no real guarantee
+// they're non-empty strings. val_id is optional here because the
+// success-redirect handler treats "no val_id yet" as a valid, if
+// incomplete, state rather than an error — the IPN route (the
+// authoritative one) enforces its own presence on top of this.
+export const sslcommerzCallbackSchema = z.object({
+  value_a: z.string().min(1, "Missing order reference (value_a)"), // orderId, set by us in lib/sslcommerz.ts
+  val_id: z.string().min(1).optional(),
+  status: z.string().optional(),
+});

@@ -4,6 +4,7 @@ import { validateSSLCommerzPayment, paymentAmountMatches } from "@/lib/sslcommer
 import { serializeOrder } from "@/lib/serializers";
 import { sendOrderConfirmationEmail, sendNewOrderAlertEmail } from "@/lib/email";
 import { defaultRestaurantSettings } from "@/data/restaurant";
+import { sslcommerzCallbackSchema } from "@/lib/validation";
 
 // POST /api/payments/sslcommerz/success
 // SSLCommerz redirects the customer's BROWSER here (via an auto-submitting
@@ -17,12 +18,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const formData = await req.formData();
-    const valId = formData.get("val_id")?.toString();
-    const orderId = formData.get("value_a")?.toString();
+    const parsed = sslcommerzCallbackSchema.safeParse(Object.fromEntries(formData));
 
-    if (!orderId) {
+    if (!parsed.success) {
+      console.error("SSLCommerz success handler: malformed callback", parsed.error.flatten());
       return NextResponse.redirect(`${appUrl}/menu`, 303);
     }
+
+    const { value_a: orderId, val_id: valId } = parsed.data;
 
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sslcommerzCallbackSchema } from "@/lib/validation";
 
 // POST /api/payments/sslcommerz/fail
 // SSLCommerz sends the browser here when a payment attempt genuinely
@@ -12,12 +13,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const formData = await req.formData();
-    const orderId = formData.get("value_a")?.toString();
+    const parsed = sslcommerzCallbackSchema.safeParse(Object.fromEntries(formData));
 
-    if (!orderId) {
+    if (!parsed.success) {
+      console.error("SSLCommerz fail handler: malformed callback", parsed.error.flatten());
       return NextResponse.redirect(`${appUrl}/checkout`, 303);
     }
 
+    const orderId = parsed.data.value_a;
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (order && order.paymentStatus !== "PAID") {
       await prisma.order.update({ where: { id: orderId }, data: { paymentStatus: "FAILED" } });

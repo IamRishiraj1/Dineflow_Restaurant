@@ -4,6 +4,7 @@ import { validateSSLCommerzPayment, paymentAmountMatches } from "@/lib/sslcommer
 import { serializeOrder } from "@/lib/serializers";
 import { sendOrderConfirmationEmail, sendNewOrderAlertEmail } from "@/lib/email";
 import { defaultRestaurantSettings } from "@/data/restaurant";
+import { sslcommerzCallbackSchema } from "@/lib/validation";
 
 // POST /api/payments/sslcommerz/ipn
 // SSLCommerz calls this server-to-server (not through the customer's
@@ -21,13 +22,18 @@ import { defaultRestaurantSettings } from "@/data/restaurant";
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const valId = formData.get("val_id")?.toString();
-    const orderId = formData.get("value_a")?.toString(); // set by us in lib/sslcommerz.ts
+    const parsed = sslcommerzCallbackSchema.safeParse(Object.fromEntries(formData));
 
-    if (!valId || !orderId) {
-      console.error("SSLCommerz IPN missing val_id or value_a", Object.fromEntries(formData));
+    if (!parsed.success || !parsed.data.val_id) {
+      console.error(
+        "SSLCommerz IPN missing or malformed val_id/value_a",
+        parsed.success ? parsed.data : parsed.error.flatten(),
+        Object.fromEntries(formData)
+      );
       return NextResponse.json({ received: true });
     }
+
+    const { value_a: orderId, val_id: valId } = parsed.data;
 
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) {
