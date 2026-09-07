@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/Button";
 import { FoodCard } from "@/components/customer/FoodCard";
 import { formatCurrency, clamp } from "@/lib/utils";
 
-export default function FoodDetailsPage({ params }: { params: { id: string } }) {
+export default function FoodDetailsPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { foods, categories, isLoading } = useCatalog();
   const { addToCart } = useCart();
   const { showToast } = useToast();
@@ -47,12 +48,12 @@ export default function FoodDetailsPage({ params }: { params: { id: string } }) 
   const category = categories.find((c) => c.id === food.categoryId);
   const related = foods.filter((f) => f.categoryId === food.categoryId && f.id !== food.id).slice(0, 4);
 
- function handleAddToCart() {
-  if (!food) return;                    // ← add this line
-  if (!food.isAvailable) return;
-  addToCart(food.id, quantity);
-  showToast(`${quantity} × ${food.name} added to cart`, "success");
-}
+  function handleAddToCart() {
+   if (!food) return;                    // ← add this line
+   if (!food.isAvailable) return;
+   addToCart(food.id, quantity);
+   showToast(`${quantity} × ${food.name} added to cart`, "success");
+ }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">

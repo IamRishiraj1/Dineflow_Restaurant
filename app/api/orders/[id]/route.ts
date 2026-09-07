@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/session";
 import { sendOrderStatusUpdateEmail } from "@/lib/email";
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // GET /api/orders/[id] — accepts either the internal id or the
@@ -30,10 +30,11 @@ interface Params {
 // order numbers. Requiring the order's own email as a second factor
 // closes that off without touching any existing, working flow.
 export const GET = withErrorHandling(async (req: NextRequest, { params }: Params) => {
-  const isOrderNumber = params.id.startsWith("DF-");
+  const { id } = await params;
+  const isOrderNumber = id.startsWith("DF-");
 
   const order = await prisma.order.findFirst({
-    where: isOrderNumber ? { orderNumber: params.id } : { id: params.id },
+    where: isOrderNumber ? { orderNumber: id } : { id },
     include: { items: true },
   });
 
@@ -62,16 +63,17 @@ export const PATCH = withErrorHandling(async (req: NextRequest, { params }: Para
   const { error } = await requireAdmin();
   if (error) return error;
 
+  const { id } = await params;
   const body = await req.json();
   const input = orderUpdateSchema.parse(body);
 
-  const existing = await prisma.order.findUnique({ where: { id: params.id } });
+  const existing = await prisma.order.findUnique({ where: { id } });
   if (!existing) {
     return apiError("Order not found.", 404);
   }
 
   const order = await prisma.order.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       ...(input.status && { status: orderStatusToDb(input.status) }),
       ...(input.paymentStatus && { paymentStatus: paymentStatusToDb(input.paymentStatus) }),
