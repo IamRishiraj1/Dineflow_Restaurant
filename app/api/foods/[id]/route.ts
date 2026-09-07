@@ -6,7 +6,7 @@ import { withErrorHandling, apiError } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/session";
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // PATCH /api/foods/[id] — partial update. Also used for the admin
@@ -16,16 +16,17 @@ export const PATCH = withErrorHandling(async (req: NextRequest, { params }: Para
   const { error } = await requireAdmin();
   if (error) return error;
 
+  const { id } = await params;
   const body = await req.json();
   const input = foodInputSchema.partial().parse(body);
 
-  const existing = await prisma.food.findUnique({ where: { id: params.id } });
+  const existing = await prisma.food.findUnique({ where: { id } });
   if (!existing) {
     return apiError("Food not found.", 404);
   }
 
   const food = await prisma.food.update({
-    where: { id: params.id },
+    where: { id },
     data: input,
   });
   return NextResponse.json(serializeFood(food));
@@ -39,11 +40,12 @@ export const DELETE = withErrorHandling(async (_req: NextRequest, { params }: Pa
   const { error } = await requireAdmin();
   if (error) return error;
 
-  const existing = await prisma.food.findUnique({ where: { id: params.id } });
+  const { id } = await params;
+  const existing = await prisma.food.findUnique({ where: { id } });
   if (!existing) {
     return apiError("Food not found.", 404);
   }
 
-  await prisma.food.delete({ where: { id: params.id } });
+  await prisma.food.delete({ where: { id } });
   return NextResponse.json({ success: true });
 });

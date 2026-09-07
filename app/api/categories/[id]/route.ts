@@ -6,7 +6,7 @@ import { withErrorHandling, apiError } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/session";
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // PATCH /api/categories/[id] — partial update (also used for the
@@ -16,16 +16,17 @@ export const PATCH = withErrorHandling(async (req: NextRequest, { params }: Para
   const { error } = await requireAdmin();
   if (error) return error;
 
+  const { id } = await params;
   const body = await req.json();
   const input = categoryInputSchema.partial().parse(body);
 
-  const existing = await prisma.category.findUnique({ where: { id: params.id } });
+  const existing = await prisma.category.findUnique({ where: { id } });
   if (!existing) {
     return apiError("Category not found.", 404);
   }
 
   const category = await prisma.category.update({
-    where: { id: params.id },
+    where: { id },
     data: input,
   });
   return NextResponse.json(serializeCategory(category));
@@ -40,11 +41,12 @@ export const DELETE = withErrorHandling(async (_req: NextRequest, { params }: Pa
   const { error } = await requireAdmin();
   if (error) return error;
 
-  const existing = await prisma.category.findUnique({ where: { id: params.id } });
+  const { id } = await params;
+  const existing = await prisma.category.findUnique({ where: { id } });
   if (!existing) {
     return apiError("Category not found.", 404);
   }
 
-  await prisma.category.delete({ where: { id: params.id } });
+  await prisma.category.delete({ where: { id } });
   return NextResponse.json({ success: true });
 });
