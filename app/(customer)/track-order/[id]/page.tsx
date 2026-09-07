@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, Store, Phone } from "lucide-react";
@@ -12,7 +12,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Order } from "@/types";
 
-export default function TrackOrderPage({ params }: { params: { id: string } }) {
+export default function TrackOrderPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { fetchOrder } = useOrders();
   const [order, setOrder] = useState<Order | null | undefined>(undefined);
 

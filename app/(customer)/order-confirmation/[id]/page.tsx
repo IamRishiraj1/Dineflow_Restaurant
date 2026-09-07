@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Clock } from "lucide-react";
@@ -11,7 +11,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { Order } from "@/types";
 
-export default function OrderConfirmationPage({ params }: { params: { id: string } }) {
+export default function OrderConfirmationPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { fetchOrder } = useOrders();
   const [order, setOrder] = useState<Order | null | undefined>(undefined); // undefined = loading
 
