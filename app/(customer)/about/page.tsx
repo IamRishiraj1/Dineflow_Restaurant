@@ -26,7 +26,7 @@ export default function AboutPage() {
         {[
           {
             image:
-              "https://www.itsoverflowing.com/wp-content/uploads/2025/01/Open-Kitchen-Concept-for-Transparency.jpg",
+              "https://images.unsplash.com/photo-1760169799369-2b8574466735?w=800&q=80&auto=format&fit=crop",
             title: "Our kitchen",
             copy: "Every dish is prepared fresh to order by a team that treats consistency as seriously as flavor.",
           },
