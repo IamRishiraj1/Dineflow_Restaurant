@@ -25,10 +25,11 @@ const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
 const STATUS_OPTIONS: OrderStatus[] = ["placed", "confirmed", "preparing", "ready", "completed", "cancelled"];
 
 export default function AdminOrdersPage() {
-  const { orders, isLoading, error, updateOrderStatus, loadAll } = useOrders();
+  const { orders, isLoading, error, updateOrderStatus, updatePaymentStatus, loadAll } = useOrders();
   const { showToast } = useToast();
   const [activeFilter, setActiveFilter] = useState<OrderStatus | "all">("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     loadAll();
@@ -50,6 +51,24 @@ export default function AdminOrdersPage() {
       showToast(err instanceof Error ? err.message : "Couldn't update order status", "error");
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  // Cash on Delivery only — online (SSLCommerz) payments must never be
+  // marked paid by hand here. Those are only ever confirmed by the
+  // gateway's own validated callback (see app/api/payments/sslcommerz/),
+  // which checks the actual amount paid before marking anything PAID.
+  // Letting an admin manually flip an online order to "paid" would bypass
+  // that check entirely.
+  async function handleMarkAsPaid(orderId: string, orderNumber: string) {
+    setUpdatingPaymentId(orderId);
+    try {
+      await updatePaymentStatus(orderId, "paid");
+      showToast(`${orderNumber} marked as paid`, "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't update payment status", "error");
+    } finally {
+      setUpdatingPaymentId(null);
     }
   }
 
@@ -113,9 +132,20 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="py-3 pr-4 font-medium text-ink-900">{formatCurrency(order.total)}</td>
                     <td className="py-3 pr-4">
-                      <Badge variant={order.paymentStatus === "paid" ? "success" : order.paymentStatus === "pending" ? "warning" : "error"}>
-                        {order.paymentStatus}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={order.paymentStatus === "paid" ? "success" : order.paymentStatus === "pending" ? "warning" : "error"}>
+                          {order.paymentStatus}
+                        </Badge>
+                        {order.paymentMethod === "cash" && order.paymentStatus === "pending" && (
+                          <button
+                            onClick={() => handleMarkAsPaid(order.id, order.orderNumber)}
+                            disabled={updatingPaymentId === order.id}
+                            className="rounded-full border border-ink-200 px-2.5 py-1 text-xs font-medium text-ink-600 transition-colors hover:bg-ink-100 disabled:opacity-50"
+                          >
+                            {updatingPaymentId === order.id ? "Saving…" : "Mark as paid"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 pr-4 text-ink-400">{formatDateTime(order.createdAt)}</td>
                     <td className="py-3 pl-4 pr-5">
