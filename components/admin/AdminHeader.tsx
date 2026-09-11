@@ -25,6 +25,7 @@ export function AdminHeader({ pathname, onOpenMobile }: { pathname: string; onOp
   const title = PAGE_TITLES[pathname] ?? "Admin";
 
   const name = session?.user?.name || "Admin";
+  const isDemoAccount = session?.user?.email?.toLowerCase() === "demo@dineflow.example";
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -52,6 +53,14 @@ export function AdminHeader({ pathname, onOpenMobile }: { pathname: string; onOp
           <Menu className="h-5 w-5" />
         </button>
         <h1 className="font-display text-lg font-semibold text-ink-900 sm:text-xl">{title}</h1>
+        {isDemoAccount && (
+          <span
+            title="Editing the menu, categories, settings, and image uploads are disabled on this shared demo account. Order status and payment actions are fully open."
+            className="hidden rounded-full bg-ember-100 px-2.5 py-1 text-xs font-semibold text-ember-700 sm:inline-block"
+          >
+            Demo mode
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">

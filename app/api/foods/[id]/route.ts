@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { serializeFood } from "@/lib/serializers";
 import { foodInputSchema } from "@/lib/validation";
 import { withErrorHandling, apiError } from "@/lib/api-helpers";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, isDemoAccount, demoRestrictedError } from "@/lib/session";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -13,8 +13,9 @@ interface Params {
 // availability toggle switch, which sends just `{ isAvailable: boolean }`.
 // Admin-only.
 export const PATCH = withErrorHandling(async (req: NextRequest, { params }: Params) => {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
+  if (isDemoAccount(session.user.email)) return demoRestrictedError();
 
   const { id } = await params;
   const body = await req.json();
@@ -37,8 +38,9 @@ export const PATCH = withErrorHandling(async (req: NextRequest, { params }: Para
 // price, and image (see OrderItem in schema.prisma), so deleting a food
 // never changes historical orders — only OrderItem.foodId is nulled out.
 export const DELETE = withErrorHandling(async (_req: NextRequest, { params }: Params) => {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
+  if (isDemoAccount(session.user.email)) return demoRestrictedError();
 
   const { id } = await params;
   const existing = await prisma.food.findUnique({ where: { id } });

@@ -1,21 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { ChefHat, Info } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/ToastContext";
 
+const DEMO_EMAIL = "demo@dineflow.example";
+
+// Wrapping in Suspense per Next's own guidance for useSearchParams() —
+// this lets the DemoBanner's "?email=demo@dineflow.example" link
+// pre-fill the field, and lets us show a "you're using the demo
+// account" notice right on the form itself.
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const prefill = searchParams.get("email");
+    if (prefill) setEmail(prefill);
+  }, [searchParams]);
+
+  const isDemoLogin = email.trim().toLowerCase() === DEMO_EMAIL;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,6 +73,17 @@ export default function LoginPage() {
         <h1 className="mt-4 font-display text-2xl font-semibold text-ink-900">Welcome back</h1>
         <p className="mt-1.5 text-sm text-ink-500">Log in to track orders and check out faster.</p>
       </div>
+
+      {isDemoLogin && (
+        <div className="mb-4 flex gap-2 rounded-xl border border-ember-200 bg-ember-50 p-3 text-sm text-ember-800">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Public demo account — feel free to explore everything, including updating order
+            status and marking payments as collected. Editing the menu, categories, settings,
+            and image uploads are disabled here so the demo stays intact for the next visitor.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-ink-100 bg-white p-6 shadow-card">
         <Input

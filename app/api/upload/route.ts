@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, isDemoAccount, demoRestrictedError } from "@/lib/session";
 import { apiError, withErrorHandling } from "@/lib/api-helpers";
 import { supabaseAdmin, FOOD_IMAGES_BUCKET } from "@/lib/supabase-admin";
 
@@ -23,8 +23,12 @@ const EXTENSION_BY_TYPE: Record<string, string> = {
 };
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
+  // Real cloud storage, real cost, real abuse surface if left open to
+  // anyone who finds the public demo login — no legitimate demo purpose
+  // needs arbitrary file uploads anyway.
+  if (isDemoAccount(session.user.email)) return demoRestrictedError();
 
   const formData = await req.formData();
   const file = formData.get("file");

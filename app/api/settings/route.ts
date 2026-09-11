@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { serializeSettings } from "@/lib/serializers";
 import { settingsUpdateSchema } from "@/lib/validation";
 import { withErrorHandling, apiError } from "@/lib/api-helpers";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, isDemoAccount, demoRestrictedError } from "@/lib/session";
 import { defaultRestaurantSettings } from "@/data/restaurant";
 
 const SETTINGS_ID = "singleton";
@@ -24,8 +24,13 @@ export const GET = withErrorHandling(async () => {
 // preferences. Upserts so this works even before the seed script has run.
 // Admin-only.
 export const PATCH = withErrorHandling(async (req: NextRequest) => {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
+  // Settings feed the PUBLIC site's footer and contact page live (see
+  // components/layout/Footer.tsx) — letting the shared demo account edit
+  // these would visibly break the site for every other visitor, not just
+  // mess up an admin-only view.
+  if (isDemoAccount(session.user.email)) return demoRestrictedError();
 
   const body = await req.json();
   const input = settingsUpdateSchema.parse(body);

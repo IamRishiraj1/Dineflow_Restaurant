@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { serializeFood } from "@/lib/serializers";
 import { foodInputSchema } from "@/lib/validation";
 import { withErrorHandling, apiError } from "@/lib/api-helpers";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, isDemoAccount, demoRestrictedError } from "@/lib/session";
 
 // GET /api/foods — the full menu. Both the customer-facing menu browser and
 // the admin food table load from this single endpoint. Left open (no auth
@@ -17,8 +17,9 @@ export const GET = withErrorHandling(async () => {
 
 // POST /api/foods — create a new menu item. Admin-only.
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
+  if (isDemoAccount(session.user.email)) return demoRestrictedError();
 
   const body = await req.json();
   const input = foodInputSchema.parse(body);

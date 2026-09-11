@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { serializeCategory } from "@/lib/serializers";
 import { categoryInputSchema } from "@/lib/validation";
 import { withErrorHandling, apiError } from "@/lib/api-helpers";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, isDemoAccount, demoRestrictedError } from "@/lib/session";
 
 // GET /api/categories — list every category. Left open (no auth required)
 // on purpose: this is public menu data the customer-facing site needs to
@@ -17,8 +17,9 @@ export const GET = withErrorHandling(async () => {
 
 // POST /api/categories — create a new category. Admin-only.
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
+  if (isDemoAccount(session.user.email)) return demoRestrictedError();
 
   const body = await req.json();
   const input = categoryInputSchema.parse(body);
