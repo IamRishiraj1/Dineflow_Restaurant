@@ -54,6 +54,43 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   const body = await req.json();
   const input = placeOrderInputSchema.parse(body);
 
+  // SECURITY: input.items[].price, input.subtotal, and input.total are
+  // client-submitted and must never be trusted directly — anyone can
+  // edit a request body before it reaches this route. Every price used
+  // below is re-derived from the current Food row in the database; the
+  // client's numbers are only used to know WHICH foods and quantities
+  // were requested, never what they cost.
+  const foodIds = [...new Set(input.items.map((item) => item.foodId))];
+  const foods = await prisma.food.findMany({ where: { id: { in: foodIds } } });
+  const foodById = new Map(foods.map((f) => [f.id, f]));
+
+  for (const item of input.items) {
+    const food = foodById.get(item.foodId);
+    if (!food) {
+      return apiError("One or more items in your cart are no longer on the menu. Please refresh your cart.", 409);
+    }
+    if (!food.isAvailable) {
+      return apiError(`"${food.name}" is currently unavailable. Please remove it from your cart.`, 409);
+    }
+  }
+
+  const settings = await prisma.restaurantSettings.findUnique({ where: { id: "singleton" } });
+  const configuredDeliveryFee = settings?.deliveryFee ?? defaultRestaurantSettings.deliveryFee;
+
+  const orderItems = input.items.map((item) => {
+    const food = foodById.get(item.foodId)!; // presence already checked above
+    return {
+      foodId: food.id,
+      name: food.name,
+      price: food.price,
+      quantity: item.quantity,
+      image: food.image,
+    };
+  });
+  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const deliveryFee = input.orderType === "delivery" ? configuredDeliveryFee : 0;
+  const total = subtotal + deliveryFee;
+
   // Every order starts PENDING regardless of payment method. Cash stays
   // pending until collected on delivery/pickup. Card/mobile-banking orders
   // ALSO start pending — they only flip to PAID once SSLCommerz actually
@@ -86,19 +123,11 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
           paymentMethod: paymentMethodToDb(input.paymentMethod),
           paymentStatus,
           status: "PLACED",
-          subtotal: input.subtotal,
-          deliveryFee: input.deliveryFee,
-          total: input.total,
+          subtotal,
+          deliveryFee,
+          total,
           estimatedReadyMinutes: 25 + Math.round(Math.random() * 15),
-          items: {
-            create: input.items.map((item) => ({
-              foodId: item.foodId,
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              image: item.image,
-            })),
-          },
+          items: { create: orderItems },
         },
         include: { items: true },
       });
@@ -125,7 +154,6 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   // sendEmailSafely() never throws, so a Resend outage or missing API key
   // can't fail the checkout itself, only skip the email.
   if (input.paymentMethod === "cash") {
-    const settings = await prisma.restaurantSettings.findUnique({ where: { id: "singleton" } });
     await Promise.all([
       sendOrderConfirmationEmail(serialized),
       sendNewOrderAlertEmail(serialized, settings?.email || defaultRestaurantSettings.email),
