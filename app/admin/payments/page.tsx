@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Wallet, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { StatCard } from "@/components/admin/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useOrders } from "@/context/OrderContext";
+import { useToast } from "@/context/ToastContext";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 // Transactions are derived directly from real orders — every order that
@@ -14,7 +15,9 @@ import { formatCurrency, formatDateTime } from "@/lib/utils";
 // partial refunds, multiple attempts per order, etc. That's a reasonable
 // simplification for now; revisit if refund tracking becomes a real need.
 export default function AdminPaymentsPage() {
-  const { orders, isLoading, loadAll } = useOrders();
+  const { orders, isLoading, updatePaymentStatus, loadAll } = useOrders();
+  const { showToast } = useToast();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadAll();
@@ -29,6 +32,18 @@ export default function AdminPaymentsPage() {
   const transactions = [...orders].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  async function handleMarkAsPaid(orderId: string, orderNumber: string) {
+    setUpdatingId(orderId);
+    try {
+      await updatePaymentStatus(orderId, "paid");
+      showToast(`${orderNumber} marked as paid`, "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't update payment status", "error");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -56,13 +71,15 @@ export default function AdminPaymentsPage() {
         <div className="border-b border-ink-100 p-5">
           <h2 className="font-display text-base font-semibold text-ink-900">Transactions</h2>
           <p className="mt-1 text-sm text-ink-500">
-            Cash on Delivery orders show as pending until collected. Online payments are processed
-            via SSLCommerz — the Gateway Ref below is SSLCommerz&apos;s own validation id, useful if
-            you ever need to look a payment up on their dashboard directly.
+            Cash on Delivery orders show as pending until collected — mark them paid right here
+            once the driver returns. Online payments are processed via SSLCommerz — the Gateway
+            Ref below is SSLCommerz&apos;s own validation id, useful if you ever need to look a
+            payment up on their dashboard directly, and can only ever be confirmed by the gateway
+            itself, never marked paid by hand.
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
+          <table className="w-full min-w-[880px] text-left text-sm">
             <thead>
               <tr className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
                 <th className="py-3 pl-5 pr-4 font-medium">Order</th>
@@ -85,17 +102,28 @@ export default function AdminPaymentsPage() {
                     {order.paymentValId ?? "—"}
                   </td>
                   <td className="py-3 pr-4">
-                    <Badge
-                      variant={
-                        order.paymentStatus === "paid"
-                          ? "success"
-                          : order.paymentStatus === "pending"
-                            ? "warning"
-                            : "error"
-                      }
-                    >
-                      {order.paymentStatus}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          order.paymentStatus === "paid"
+                            ? "success"
+                            : order.paymentStatus === "pending"
+                              ? "warning"
+                              : "error"
+                        }
+                      >
+                        {order.paymentStatus}
+                      </Badge>
+                      {order.paymentMethod === "cash" && order.paymentStatus === "pending" && (
+                        <button
+                          onClick={() => handleMarkAsPaid(order.id, order.orderNumber)}
+                          disabled={updatingId === order.id}
+                          className="rounded-full border border-ink-200 px-2.5 py-1 text-xs font-medium text-ink-600 transition-colors hover:bg-ink-100 disabled:opacity-50"
+                        >
+                          {updatingId === order.id ? "Saving…" : "Mark as paid"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 pr-5 text-ink-400">{formatDateTime(order.createdAt)}</td>
                 </tr>
