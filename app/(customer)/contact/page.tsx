@@ -88,6 +88,7 @@ export default function ContactPage() {
         <div className="space-y-4 lg:col-span-2">
           <div className="rounded-2xl border border-ink-100 bg-white p-6 shadow-card">
             <h2 className="font-display text-base font-semibold text-ink-900">Visit or reach us</h2>
+            <p className="mt-1 text-xs italic text-ink-400">Example data — used for demonstration purposes only.</p>
             <ul className="mt-4 space-y-3 text-sm text-ink-600">
               <li className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ember-500" /> {settings.address}

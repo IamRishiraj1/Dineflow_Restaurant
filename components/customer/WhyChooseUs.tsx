@@ -31,6 +31,9 @@ export function WhyChooseUs() {
         <h2 className="mt-2 font-display text-3xl font-semibold text-ink-900">
           Built around a better ordering experience
         </h2>
+        <p className="mt-2 text-xs italic text-ink-400">
+          Kitchen and sourcing details are example content for demonstration purposes.
+        </p>
       </div>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {benefits.map((b) => (
