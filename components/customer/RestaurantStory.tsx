@@ -7,26 +7,25 @@ export function RestaurantStory() {
         <div className="relative order-2 aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-card lg:order-1">
           <Image
             src="https://images.pexels.com/photos/3938919/pexels-photo-3938919.jpeg?auto=compress&w=1260&h=750&dpr=1"
-            alt="Chefs preparing dishes together in the DineFlow kitchen"
+            alt="Chefs preparing dishes together in a restaurant kitchen"
             fill
             sizes="(max-width: 1024px) 90vw, 45vw"
             className="object-cover"
           />
         </div>
         <div className="order-1 lg:order-2">
-          <p className="text-sm font-medium uppercase tracking-wide text-ember-600">Our story</p>
+          <p className="text-sm font-medium uppercase tracking-wide text-ember-600">About this project</p>
           <h2 className="mt-2 font-display text-3xl font-semibold text-ink-900">
-            A neighborhood kitchen, run like a modern kitchen should be
+            A restaurant ordering experience, built end to end
           </h2>
           <p className="mt-4 text-base leading-relaxed text-ink-600">
-            DineFlow started as a single kitchen in Dhaka focused on one idea: food this good
-            shouldn&apos;t come with a complicated ordering process. Today our kitchen team preps
-            every dish to order, and our platform gets it to you — or ready for pickup — without
-            the wait.
+            DineFlow is built around one idea: great food shouldn&apos;t come with a complicated
+            ordering process. Customers browse, order, pay, and track their order live — while the
+            restaurant side manages the menu, orders, and payments from a real admin dashboard.
           </p>
           <p className="mt-3 text-base leading-relaxed text-ink-600">
-            No shortcuts on ingredients, no friction at checkout. Just food, made well, delivered
-            simply.
+            The restaurant, kitchen, and menu shown here are example content for demonstration
+            purposes; the platform behind them is fully functional.
           </p>
         </div>
       </div>

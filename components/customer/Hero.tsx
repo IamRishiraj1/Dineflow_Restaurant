@@ -8,7 +8,7 @@ export function Hero() {
       <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-2 lg:px-8 lg:py-28">
         <div className="animate-fade-in">
           <span className="inline-flex items-center rounded-full border border-ember-500/40 bg-ember-500/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-ember-300">
-            Now delivering across Dhaka
+            Full-stack ordering platform
           </span>
           <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.08] tracking-tight text-cream-50 sm:text-5xl lg:text-[3.4rem]">
             Good food,
@@ -29,7 +29,7 @@ export function Hero() {
           </div>
           <div className="mt-8 flex items-center gap-2 text-sm text-ink-300">
             <ShieldCheck className="h-[18px] w-[18px] text-success-500" />
-            <span>Secure checkout · Fresh ingredients · 15,000+ happy orders</span>
+            <span>Secure checkout · Fresh ingredients · Real payment integration</span>
           </div>
         </div>
 
@@ -46,8 +46,8 @@ export function Hero() {
             />
           </div>
           <div className="absolute -bottom-5 -left-5 hidden rounded-2xl bg-cream-50 px-5 py-4 shadow-lift sm:block">
-            <p className="font-display text-2xl font-semibold text-ink-900">18 min</p>
-            <p className="text-xs text-ink-500">average prep time</p>
+            <p className="font-display text-2xl font-semibold text-ink-900">Live</p>
+            <p className="text-xs text-ink-500">order tracking, start to finish</p>
           </div>
         </div>
       </div>

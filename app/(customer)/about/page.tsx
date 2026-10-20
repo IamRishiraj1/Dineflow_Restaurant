@@ -14,10 +14,11 @@ export default function AboutPage() {
             Food, made simple to order
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-ink-300">
-            DineFlow began as one kitchen in Dhaka with a simple goal: serve genuinely good food
-            without making people jump through hoops to order it. That focus on doing the
-            essentials well — fresh ingredients, fast prep, and an ordering flow that gets out of
-            your way — still shapes everything we build.
+            DineFlow is a full-stack ordering platform built to show what a complete restaurant
+            experience could look like — from browsing the menu to tracking an order after
+            checkout. The ordering, payment, and admin systems behind it are fully real and live;
+            the restaurant name, story, and sourcing details below are example content for
+            demonstration purposes.
           </p>
         </div>
       </section>

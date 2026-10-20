@@ -100,7 +100,7 @@ export async function Footer() {
 
           <div>
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-cream-50">
-              Contact
+              Contact <span className="text-ink-400 normal-case">(demo data)</span>
             </h3>
             <ul className="mt-4 space-y-2.5 text-sm text-ink-300">
               <li className="flex items-start gap-2">
@@ -120,7 +120,7 @@ export async function Footer() {
 
           <div>
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-cream-50">
-              Opening Hours
+              Opening Hours <span className="text-ink-400 normal-case">(demo data)</span>
             </h3>
             <ul className="mt-4 space-y-2 text-sm text-ink-300">
               {hoursGroups.map((group, i) => (
